@@ -267,7 +267,7 @@ a new tool via MCP gives `No such tool available: nx_xxx`.
 
 **Root cause** (**not a deployment problem — stop digging through DLLs**):
 Both layers use snapshots —
-- Plug-in side: `let pendingTools = loadTools();` in `mcp/nx-exec-mcp.js` is **module-level**,
+- Plug-in side: `let pendingTools = loadTools();` in `mcp/nx-auto-mcp.js` is **module-level**,
   fetched once at process start and never refreshed; subsequent calls reuse the cached promise.
 - Client side: MCP client fetches `tools/list` **once at connection time**.
 
@@ -298,7 +298,7 @@ Exit codes: `0`=success / `1`=tool failure / `2`=usage error — usable as scrip
   `ping, get_selection, get_model_summary, tool, list_tools,
   measure, list_features, modify_expression, export, undo, get_parameters`
   (`nx-tcp-call.js --methods` prints this table; the `execute` method in old docs was removed from the plug-in and is no longer registered)
-- ⚠️ **Only `nx_open` gets special handling from the MCP server**: `mcp/nx-exec-mcp.js` intercepts it
+- ⚠️ **Only `nx_open` gets special handling from the MCP server**: `mcp/nx-auto-mcp.js` intercepts it
   and uses `child_process.exec` to launch `ugraf.exe -nx` directly (no TCP). Calling it via this script is pointless —
   it hits a **different implementation** in the plug-in (`plugin/tools/UtilityTools.cs` `OpenNxTool`,
   uses PowerShell `Start-Process`), and when NX is already running it always returns `already_running`.
