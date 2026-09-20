@@ -7,7 +7,7 @@ Keywords: Siemens NX MCP, NX MCP Server, NXOpen, CAD automation, AI agent, Model
 nx-auto-mcp is an open-source MCP (Model Context Protocol) server that bridges AI agents to Siemens NX. It exposes NX's modeling, sketching, assembly, measurement, inspection, sheet metal, and other CAD capabilities as MCP tools.
 
 ## Architecture
-Claude Code --stdio(MCP)--> mcp/nx-exec-mcp.js --TCP:1977--> managed_plugin.dll --NXOpen--> NX
+Claude Code --stdio(MCP)--> mcp/nx-auto-mcp.js --TCP:1977--> managed_plugin.dll --NXOpen--> NX
 
 ## Tool Coverage (130+ tools across 15 domains)
 - Modeling / solids: 24 tools (extrude, revolve, sweep, blend, chamfer, hole, pattern, boolean, shell, draft, loft, etc.)
