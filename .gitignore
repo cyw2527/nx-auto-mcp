@@ -1,0 +1,40 @@
+# ── 构建产物 (本仓库只发源码, 不发预编译 DLL) ──
+# 使用者需自行 build.bat 编译并签名, 见 README「安装」。
+plugin/bin/
+plugin/startup/*.dll
+# deploy.bat 会把 rules/rules_config.json 拷到这里供运行时读取 (构建产物)
+plugin/startup/rules/
+*.pdb
+*.obj
+*.user
+
+# ── 签名资源 (Siemens 文件) ──
+# 由 build.bat 在编译时从本机 %NX_ROOT%\UGOPEN\ 取用, 仓库不再分发副本。
+NXSigningResource.res
+
+# ── 运行时生成 ──
+# 由 setup.bat 生成, 内容是本机绝对路径, 不可跨机器复用。
+custom_dirs.dat
+# 用户按 .mcp.json.example 创建, 含本机绝对路径, 不可提交。
+.mcp.json
+
+# ── 归档/备份 ──
+_prev_*
+*.old
+*.bak
+_backup_*/
+
+# ── 编辑器 / 系统 ──
+.vs/
+.vscode/
+*.suo
+Thumbs.db
+.DS_Store
+desktop.ini
+node_modules/
+CLAUDE.md
+
+# ── 环境变量 / 日志 ──
+.env
+.env.*
+*.log
