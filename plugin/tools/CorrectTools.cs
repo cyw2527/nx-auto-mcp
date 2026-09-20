@@ -107,6 +107,9 @@ namespace NxMcpPlugin.Tools.Correct
     /// NX2412: Features.DeleteFeature() and Features.Update() don't exist.
     /// Use expression update only - NX automatically updates the model.
     /// </summary>
+    /// Parameters:
+    ///   new_parameters (string, optional) - new_parameters parameter.
+    ///
     public class RebuildFeatureTool : IToolHandler
     {
         public string Name { get { return "nx_rebuild_feature"; } }
@@ -354,6 +357,9 @@ namespace NxMcpPlugin.Tools.Correct
     /// NX2412: Most auto-fixes require manual intervention (edge.GetFeature/DeleteFeature don't exist).
     /// Returns guidance for each issue type.
     /// </summary>
+    /// Parameters:
+    ///   parameters (string, optional) - parameters parameter.
+    ///
     public class ApplySuggestionTool : IToolHandler
     {
         public string Name { get { return "nx_apply_suggestion"; } }
