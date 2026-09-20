@@ -1,0 +1,8 @@
+! NX MCP Plugin — Hotkey button definitions
+! ACCELERATOR is a valid keyword for .btn files (not supported in .men)
+! Note (2026-09-19): earlier comments claimed "NX_MCP_HOVER_CAPTURE button removed ... deployed DLL did not register this action".
+! That is outdated — the button is defined in nx_mcp_plugin.men, and ManagedPlugin.cs has registered
+! (Action="NX_MCP_HOVER_CAPTURE") and dispatches it; it won't report "missing valid action".
+! The feature itself (ContextMenuHandler.OnHoverCapture, based on UIAutomation) has not been runtime-verified.
+VERSION 120
+CREATE BUTTON_DEFINITIONS
