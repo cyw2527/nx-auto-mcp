@@ -9,7 +9,7 @@
 // **tool-level validation** and **immediate access to new tools**.
 //
 // ══ Relationship with MCP server ══
-// mcp/nx-exec-mcp.js also uses nxCall("list_tools", {}) to get the list — note
+// mcp/nx-auto-mcp.js also uses nxCall("list_tools", {}) to get the list — note
 // it passes the **method name** directly; while normal tool calls use
 // method:"tool" + params.tool=<name>. Both forms are supported by this script
 // (see --raw and default usage).
@@ -29,7 +29,7 @@
 // ══ Known pitfalls ══
 //   - GBK Chinese output may appear as mojibake (terminal encoding); JSON structure itself is correct
 //   - Default timeout is 120s (NX main thread execution, large ops are slow)
-//   - nx_open: when called via MCP, it's intercepted by the adapter layer (mcp/nx-exec-mcp.js uses
+//   - nx_open: when called via MCP, it's intercepted by the adapter layer (mcp/nx-auto-mcp.js uses
 //     child_process to launch ugraf.exe), not via TCP. This script connects directly to the plugin,
 //     using the plugin's internal PowerShell implementation — two different paths, but both start NX.
 //   - nx_close: ★ no interception at all, this script behaves **exactly the same** as calling via MCP —
