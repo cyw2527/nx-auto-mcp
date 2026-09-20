@@ -11,6 +11,9 @@ namespace NxMcpPlugin.Tools.Wave
     /// Assembly mode: component.FindOccurrence(prototypeBody) → occurrence
     /// Single-part mode: body directly via ExtractFaceBuilder (same-part WAVE)
     /// </summary>
+    /// Parameters:
+    ///   body_tags (string, optional) - body_tags parameter.
+    ///
     public class WaveLinkTool : IToolHandler
     {
         public string Name { get { return "nx_wave_link"; } }
@@ -26,17 +29,21 @@ namespace NxMcpPlugin.Tools.Wave
                     return ToolResult.Fail("body_tags array required.").ToJson();
                 bool associative = p.Value<bool?>("associative") ?? true;
 
+                // Forum-verified: workPart.BaseFeatures.CreateWaveLinkBuilder
                 dynamic builder = wp.BaseFeatures.CreateWaveLinkBuilder(null);
 
+                // Set type: BodyLink — try enum value (1), enum name, then SetType method
                 try { builder.Type = 1; } catch { }
                 try { var tProp = builder.GetType().GetProperty("Type"); var tEnum = Enum.ToObject(tProp.PropertyType, 1); tProp.SetValue(builder, tEnum, null); } catch { }
 
+                // Forum-verified: bodies go through ExtractFaceBuilder.BodyToExtract
                 dynamic extractFaceBuilder = null;
                 try { extractFaceBuilder = builder.ExtractFaceBuilder; } catch { }
                 if (extractFaceBuilder == null)
                     return ToolResult.Fail("WaveLinkBuilder.ExtractFaceBuilder not available.").ToJson();
 
-                try { extractFaceBuilder.ParentPart = 1; } catch { }
+                // Set parent part to OtherPart for inter-part WAVE
+                try { extractFaceBuilder.ParentPart = 1; } catch { } // 1=OtherPart
 
                 int added = 0;
                 foreach (JToken bt in bodyTags)
@@ -44,6 +51,7 @@ namespace NxMcpPlugin.Tools.Wave
                     try
                     {
                         var prototypeBody = ToolHelpers.FindBodyByTag(wp, bt.Value<int>());
+                        // L2: direct iteration fallback
                         if (prototypeBody == null)
                         {
                             foreach (dynamic b in wp.Bodies)
@@ -53,9 +61,12 @@ namespace NxMcpPlugin.Tools.Wave
                         }
                         if (prototypeBody == null) continue;
 
+                        // Forum-verified: need OCCURRENCE body in assembly context.
+                        // Step 1: find the component that owns this body
                         dynamic occurrenceBody = null;
                         try
                         {
+                            // Try to get occurrence via assembly component hierarchy
                             var compRoot = wp.ComponentAssembly.RootComponent;
                             if (compRoot != null)
                             {
@@ -64,6 +75,7 @@ namespace NxMcpPlugin.Tools.Wave
                                 {
                                     try
                                     {
+                                        // FindOccurrence returns the body in the context of the target work part
                                         occurrenceBody = comp.FindOccurrence(prototypeBody);
                                         if (occurrenceBody != null) break;
                                     }
@@ -73,9 +85,11 @@ namespace NxMcpPlugin.Tools.Wave
                         }
                         catch { }
 
+                        // Fallback: if no assembly context, use prototype body directly (same-part WAVE)
                         if (occurrenceBody == null)
                             occurrenceBody = prototypeBody;
 
+                        // Forum-verified: add to ExtractFaceBuilder.BodyToExtract
                         var bodyToExtract = extractFaceBuilder.BodyToExtract;
                         if (bodyToExtract != null)
                         {
@@ -103,6 +117,9 @@ namespace NxMcpPlugin.Tools.Wave
     /// Extract Geometry - extract faces from a body as separate geometry.
     /// Runtime probe: FacesToExtract (SelectFaceList) + Associative (bool writable)
     /// </summary>
+    /// Parameters:
+    ///   face_tags (string, optional) - face_tags parameter.
+    ///
     public class ExtractGeometryTool : IToolHandler
     {
         public string Name { get { return "nx_extract_geometry"; } }
@@ -125,6 +142,7 @@ namespace NxMcpPlugin.Tools.Wave
                     try
                     {
                         var f = ToolHelpers.FindFaceByTag(wp, ft.Value<int>());
+                        // Verified 2026-08-17: FacesToExtract is SelectFaceList — use Add(face) directly
                         if (f != null) { builder.FacesToExtract.Add(f); added++; }
                         else { Surface.SectionHelper.Log("extract face not found: " + ft.Value<int>()); }
                     }
