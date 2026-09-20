@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "nx-exec": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["C:/path/to/nx-auto-mcp/mcp/nx-exec-mcp.js"]
+    }
+  }
+}
