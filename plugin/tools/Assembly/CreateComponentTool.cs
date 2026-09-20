@@ -27,7 +27,7 @@ namespace NxMcpPlugin.Tools.Assembly
 
     /// <summary>
     /// Create a new component (.prt) from bodies of the work part and add it to the assembly (top-down New Component).
-    /// GAP-12 配方实证: CreateNewComponentBuilder + NewFile 显式赋值 (P-12a/b/c/g)。
+    /// GAP-12 配方实证: CreateNewComponentBuilder + NewFile 显式赋值 (P-12a/b/c/g).
     /// </summary>
     /// Parameters:
     ///   bodies (array, optional) - 体名/journal id 列表 (含匹配); 缺省 = 工作部件全部实体
