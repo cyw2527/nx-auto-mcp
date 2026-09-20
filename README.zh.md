@@ -12,7 +12,7 @@
 把 Siemens NX 变成 AI Agent 可以直接操作的对象。通过 MCP（Model Context Protocol）把 NX 的建模、草图、装配、测量等能力暴露成工具，Claude Code / 任何 MCP 客户端即可直接调用。
 
 ```
-Claude Code  ──stdio(MCP)──▶  mcp/nx-exec-mcp.js  ──TCP:1977──▶  managed_plugin.dll  ──NXOpen──▶  NX
+Claude Code  ──stdio(MCP)──▶  mcp/nx-auto-mcp.js  ──TCP:1977──▶  managed_plugin.dll  ──NXOpen──▶  NX
               ◀────────────                        ◀───────────                     ◀────────
 ```
 
@@ -35,7 +35,7 @@ nx-auto-mcp/
 ├── setup.bat              ← 生成 custom_dirs.dat + 设置 NX 环境变量
 ├── LICENSE                ← MIT
 ├── mcp/                   ← MCP 适配层（纯 Node，无需 npm install）
-│   ├── nx-exec-mcp.js           MCP stdio 入口
+│   ├── nx-auto-mcp.js           MCP stdio 入口
 │   ├── mcp-compatible-stdio.js  传输层（双 framing + stdout sentinel）
 │   └── tool-schemas.json        工具参数契约快照
 ├── plugin/                ← NX 插件层（C#，需自行编译）
@@ -148,24 +148,24 @@ cd ..
 ```json
 {
   "mcpServers": {
-    "nx-exec": {
+    "nx-auto-mcp": {
       "type": "stdio",
       "command": "node",
-      "args": ["C:/path/to/nx-auto-mcp/mcp/nx-exec-mcp.js"]
+      "args": ["C:/path/to/nx-auto-mcp/mcp/nx-auto-mcp.js"]
     }
   }
 }
 ```
 
-> **确认客户端真的读到了这个文件**：在会话里敲 `/mcp`（能看到 `nx-exec` 及其连接状态），或
-> 命令行 `claude mcp list`；`claude mcp get nx-exec` 还会告诉你该服务器由**哪个作用域**定义，
+> **确认客户端真的读到了这个文件**：在会话里敲 `/mcp`（能看到 `nx-auto-mcp` 及其连接状态），或
+> 命令行 `claude mcp list`；`claude mcp get nx-auto-mcp` 还会告诉你该服务器由**哪个作用域**定义，
 > 用来确认你改的正是它读的那个文件。`.mcp.json` **只在会话启动时读一次**，改完要重开会话。
 >
 > ⚠️ 示例文件第二行有一个非标准的顶层 `_comment` 键。若你的客户端不认它，症状是**静默地
 > 一个服务器都没出现**（不报错）——删掉那一行再试即可。
 
 > ⚠️ **顺序要求：先起 NX，再起 MCP 客户端。** 适配层在**进程启动时**拉一次工具清单
-> （`mcp/nx-exec-mcp.js` 里 `let pendingTools = loadTools();` 是模块级的），此后不再刷新。
+> （`mcp/nx-auto-mcp.js` 里 `let pendingTools = loadTools();` 是模块级的），此后不再刷新。
 > 如果 MCP 客户端先于 NX 启动（或 NX 还没把插件加载完），它拉到的就是**空清单**——
 > 表现为 MCP 里一个 `nx_*` 工具都看不到，且**不会自己恢复**。
 >
@@ -323,7 +323,7 @@ node scripts/nx-tcp-call.js nx_list_open_parts '{}'      # 调用单个工具（
 `{type:"object", additionalProperties:true}`（参数仍以插件契约为准）。所以新增工具**只需要改插件**，
 这份 JSON 是可选补全，不是必须同步的第二处。
 
-> ⚠️ **工具名必须以 `nx_` 开头**，这是 MCP 适配层的硬性要求（`mcp/nx-exec-mcp.js` 对不以 `nx_`
+> ⚠️ **工具名必须以 `nx_` 开头**，这是 MCP 适配层的硬性要求（`mcp/nx-auto-mcp.js` 对不以 `nx_`
 > 开头的名字直接返回 `Tool not found`）。而 `nx-tcp-call.js --list` 是**直连插件**的，没有这个限制，
 > 会照实列出不带前缀的工具——**看到它在清单里 ≠ MCP 调得到**。名字少写前缀时，`--list` 的"有"
 > 是假阳性，别顺着它去查连接快照。
