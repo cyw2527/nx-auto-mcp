@@ -1,0 +1,15 @@
+!
+! NX MCP Plugin — right-click popup menu
+!
+! Adds "Ask AI" option to the view area right-click context menu
+! Note: the view popup menu uses the UG_GATEWAY_VIEW_POPUP context, not MAIN_MENUBAR
+!
+VERSION 120
+
+EDIT UG_GATEWAY_VIEW_POPUP
+
+BEFORE UG_VIEW_POPUP_REFRESH
+    BUTTON NX_MCP_ASK_AI
+    LABEL Ask AI
+    ACTIONS NX_MCP_ASK_AI
+END_OF_BEFORE
