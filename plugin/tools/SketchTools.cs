@@ -218,8 +218,6 @@ namespace NxMcpPlugin.Tools.Sketch
             NXOpen.Line l2 = c2 as NXOpen.Line;
             if (l1 != null && l2 != null)
             {
-                // 3D parametric closest-point intersection of two coplanar lines —
-                // works on ANY sketch plane (XY/XZ/YZ). Previously used world XY only (z=0 hardcoded).
                 double ax = l1.StartPoint.X, ay = l1.StartPoint.Y, az = l1.StartPoint.Z;
                 double bx = l1.EndPoint.X,   by = l1.EndPoint.Y,   bz = l1.EndPoint.Z;
                 double cx = l2.StartPoint.X, cy = l2.StartPoint.Y, cz = l2.StartPoint.Z;
@@ -272,15 +270,13 @@ namespace NxMcpPlugin.Tools.Sketch
 
         /// <summary>
         /// A point ON the curve near the target (line: projection clamped + nudged 5% toward
-        /// interior; arc: radial projection). Used for Sketch.Fillet help points — verified
-        /// 2026-08-15 that exactly-at-corner help points fail to solve.
+        /// interior; arc: radial projection). Used for Sketch.Fillet help points.
         /// </summary>
         public static NXOpen.Point3d PointOnCurveNear(NXOpen.Curve c, NXOpen.Point3d target)
         {
             NXOpen.Line l = c as NXOpen.Line;
             if (l != null)
             {
-                // 3D projection — works on any sketch plane (XY/XZ/YZ).
                 double x1 = l.StartPoint.X, y1 = l.StartPoint.Y, z1 = l.StartPoint.Z;
                 double x2 = l.EndPoint.X,   y2 = l.EndPoint.Y,   z2 = l.EndPoint.Z;
                 double dx = x2 - x1, dy = y2 - y1, dz = z2 - z1;
@@ -294,7 +290,6 @@ namespace NxMcpPlugin.Tools.Sketch
             NXOpen.Arc a = c as NXOpen.Arc;
             if (a != null)
             {
-                // Angle computed in the arc's own plane (Matrix rows = in-plane axes).
                 NXOpen.Matrix3x3 m = ((NXOpen.NXMatrix)a.Matrix).Element;
                 double tdx = target.X - a.CenterPoint.X;
                 double tdy = target.Y - a.CenterPoint.Y;
@@ -329,21 +324,6 @@ namespace NxMcpPlugin.Tools.Sketch
     // 1. nx_create_sketch
     // ========================================================================
 
-    /// <summary>
-    /// Create a new sketch on the specified reference plane (XY, XZ, or YZ).
-    /// Uses NX2412 CreateNewSketchInPlaceBuilder(None) and iterates Datums
-    /// to find the matching datum plane reference.
-    /// Parameters:
-    ///   plane (string, optional) - Reference plane: "XY" (default), "XZ", or "YZ".
-    ///   name (string, optional) - Sketch name (default: auto-generated).
-    ///
-    /// NX2412 quirks:
-    ///   - Activate() requires Sketch.ViewReorient enum, NOT a boolean.
-    ///   - PlaneReference must be set to a valid datum plane before Commit().
-    ///   - Datum names vary by locale; use case-insensitive Contains matching
-    ///     with both "XY Plane" and "Datum Plane" patterns.
-    ///   - Error 4360002 = invalid builder state (null PlaneReference or wrong Activate arg type).
-    /// </summary>
     public class CreateSketchTool : IToolHandler
     {
         public string Name { get { return "nx_create_sketch"; } }
@@ -367,12 +347,6 @@ namespace NxMcpPlugin.Tools.Sketch
                     return ToolResult.Fail(string.Format("Invalid plane '{0}'. Use one of: {1}.", plane, valid)).ToJson();
                 }
 
-                // NX2412 TODO-1 fix (2026-08-20, journal-verified):
-                // CreateNewSketchInPlaceBuilder IGNORES PlaneReference for non-XY planes —
-                // sketch silently lands on work plane XY even with PlaneOption=ExistingPlane
-                // (实测: 6 配置全落在 XY, 加 AxisReference 反而报"目标面损坏").
-                // ✅ 两段式 (journal 实测 SKETCH_004): 先 XY 默认提交 → CreateSketchInPlaceBuilder2 重附着:
-                //   PlaneOption=ExistingPlane + PlaneReference=CreateFixedPlane(origin,matrix) + AxisReference.
                 dynamic builder = workPart.Sketches.CreateNewSketchInPlaceBuilder(null);
                 dynamic sketch = builder.Commit();
                 builder.Destroy();
@@ -393,16 +367,12 @@ namespace NxMcpPlugin.Tools.Sketch
 
                 string sketchName = (sketch != null ? sketch.Name : null) ?? name ?? "Sketch";
 
-                // Rename if requested
                 if (!string.IsNullOrEmpty(name) && sketch != null)
                 {
                     sketch.SetName(name);
                     sketchName = name;
                 }
 
-                // Activate the sketch so geometry can be drawn
-                // NX2412: Activate() requires Sketch.ViewReorient enum, NOT a boolean!
-                // Passing true/bool causes error 4360002 (invalid argument type).
                 if (sketch != null)
                 {
                     sketch.Activate(NXOpen.Sketch.ViewReorient.True);
@@ -419,9 +389,6 @@ namespace NxMcpPlugin.Tools.Sketch
             }
         }
 
-        /// <summary>
-        /// Helper: enumerate datum names for error messages.
-        /// </summary>
         private static string EnumerateDatumNames(dynamic workPart)
         {
             var names = new System.Collections.Generic.List<string>();
@@ -433,7 +400,7 @@ namespace NxMcpPlugin.Tools.Sketch
                         names.Add(datum.Name);
                 }
             }
-            catch { /* ignore enumeration errors */ }
+            catch { }
             return names.Count > 0 ? string.Join(", ", names.ToArray()) : "(none found)";
         }
     }
@@ -442,17 +409,6 @@ namespace NxMcpPlugin.Tools.Sketch
     // 2. nx_sketch_line
     // ========================================================================
 
-    /// <summary>
-    /// Create a line in the active sketch from (x1, y1) to (x2, y2).
-    /// Uses Curves.CreateLine and sketch.AddGeometry.
-    /// Re-activates the sketch after each operation to keep it active.
-    /// Parameters:
-    ///   x1 (number, required) - Start point X coordinate (sketch-local).
-    ///   y1 (number, required) - Start point Y coordinate (sketch-local).
-    ///   x2 (number, required) - End point X coordinate (sketch-local).
-    ///   y2 (number, required) - End point Y coordinate (sketch-local).
-    ///   name (string, optional) - Curve name (set AFTER AddGeometry, for nx_sketch_fillet/chamfer resolution).
-    /// </summary>
     public class SketchLineTool : IToolHandler
     {
         public string Name { get { return "nx_sketch_line"; } }
@@ -481,14 +437,10 @@ namespace NxMcpPlugin.Tools.Sketch
                 dynamic line = workPart.Curves.CreateLine(startPt, endPt);
                 sketch.AddGeometry(line);
 
-                // Fix 2026-08-04: honor custom name so nx_sketch_fillet/chamfer can resolve curves by name
-                // Verified: AddGeometry RESETS the name — SetName must come AFTER AddGeometry.
-                // NXObject.Name is READ-ONLY — use SetName(string) (反编译验证)
                 string nm = SketchHelpers.GetParamString(p, "name", null);
                 if (!string.IsNullOrEmpty(nm))
                     line.SetName(nm);
 
-                // NX2412: Re-activate sketch for subsequent operations using enum, NOT boolean
                 sketch.Activate(NXOpen.Sketch.ViewReorient.False);
 
                 var data = new JObject();
@@ -508,17 +460,6 @@ namespace NxMcpPlugin.Tools.Sketch
     // 3. nx_sketch_arc
     // ========================================================================
 
-    /// <summary>
-    /// Create an arc in the active sketch given center, radius, start and end angles.
-    /// Uses Curves.CreateArc(center, xDir, yDir, radius, startRad, endRad).
-    /// Angles are converted from degrees to radians.
-    /// Parameters:
-    ///   cx (number, required) - Center X coordinate (sketch-local).
-    ///   cy (number, required) - Center Y coordinate (sketch-local).
-    ///   radius (number, required) - Arc radius (sketch-local units).
-    ///   start_angle (number, required) - Start angle in degrees.
-    ///   end_angle (number, required) - End angle in degrees.
-    /// </summary>
     public class SketchArcTool : IToolHandler
     {
         public string Name { get { return "nx_sketch_arc"; } }
@@ -576,16 +517,6 @@ namespace NxMcpPlugin.Tools.Sketch
     // 4. nx_sketch_rectangle
     // ========================================================================
 
-    /// <summary>
-    /// Create a rectangle in the active sketch from corner (x1, y1) to (x2, y2).
-    /// Constructs four lines connecting the corners in order.
-    ///
-    /// Parameters:
-    ///   x1 (number, required) -- First corner X (sketch-local).
-    ///   y1 (number, required) -- First corner Y (sketch-local).
-    ///   x2 (number, required) -- Opposite corner X (sketch-local).
-    ///   y2 (number, required) -- Opposite corner Y (sketch-local).
-    /// </summary>
     public class SketchRectangleTool : IToolHandler
     {
         public string Name { get { return "nx_sketch_rectangle"; } }
@@ -608,7 +539,6 @@ namespace NxMcpPlugin.Tools.Sketch
                 double x2 = SketchHelpers.GetParamDouble(p, "x2");
                 double y2 = SketchHelpers.GetParamDouble(p, "y2");
 
-                // Four corners of the rectangle
                 double[][] corners = new[]
                 {
                     new[] { x1, y1 },
@@ -654,15 +584,6 @@ namespace NxMcpPlugin.Tools.Sketch
     // 5. nx_sketch_circle
     // ========================================================================
 
-    /// <summary>
-    /// Create a circle in the active sketch from center point and radius.
-    /// Uses Curves.CreateArc with a full 2*PI sweep (circle is a 360-degree arc).
-    ///
-    /// Parameters:
-    ///   cx     (number, required) -- Center X (sketch-local).
-    ///   cy     (number, required) -- Center Y (sketch-local).
-    ///   radius (number, required) -- Circle radius (sketch-local units).
-    /// </summary>
     public class SketchCircleTool : IToolHandler
     {
         public string Name { get { return "nx_sketch_circle"; } }
@@ -680,14 +601,11 @@ namespace NxMcpPlugin.Tools.Sketch
                 if (sketch == null)
                     return ToolResult.Fail("No active sketch. Use nx_create_sketch first.").ToJson();
 
-                // M0-20260912: reject unknown/legacy param names instead of silent fallback to (0,0).
-                // Real params are cx/cy/radius (tool-schemas.json); a 'center' key means caller used
-                // a stale contract — fail loudly so the caller can retry with correct names.
                 foreach (string bad in new[] { "center", "center_x", "center_y", "centre" })
                 {
                     if (p[bad] != null)
                         return ToolResult.Fail(
-                            string.Format("nx_sketch_circle: 未知参数 '{0}'。真实参数名: cx / cy / radius (见 mcp/tool-schemas.json)。", bad)).ToJson();
+                            string.Format("nx_sketch_circle: unknown parameter '{0}'. Valid params: cx / cy / radius (see mcp/tool-schemas.json).", bad)).ToJson();
                 }
 
                 double cx = SketchHelpers.GetParamDouble(p, "cx");
@@ -698,7 +616,6 @@ namespace NxMcpPlugin.Tools.Sketch
                 NXOpen.Vector3d xDir, yDir;
                 SketchHelpers.GetSketchAxes(sketch, out xDir, out yDir);
 
-                // Full circle = arc from 0 to 2*PI
                 dynamic arc = workPart.Curves.CreateArc(center, xDir, yDir, radius, 0.0, 2.0 * Math.PI);
                 sketch.AddGeometry(arc);
                 sketch.Activate(NXOpen.Sketch.ViewReorient.False);
@@ -720,21 +637,6 @@ namespace NxMcpPlugin.Tools.Sketch
     // 6. nx_sketch_constraint
     // ========================================================================
 
-    /// <summary>
-    /// Apply a constraint to sketch geometry.
-    /// Supports geometric constraints: horizontal, vertical, parallel, perpendicular,
-    /// tangent, equal_length, fix, coincident, midpoint, concentric.
-    /// Supports dimensional constraints: dimension (requires 'value' parameter).
-    /// Parameters:
-    ///   type (string, required) - Constraint type: horizontal, vertical, parallel, perpendicular, tangent, equal_length, fix, coincident, midpoint, concentric, dimension.
-    ///   geometry (array, required) - Array of curve names to constrain.
-    ///   value (number, optional) - Dimension value (required for type=dimension).
-    /// </summary>
-    /// Parameters:
-    ///   constraint_type (string, optional) - constraint_type parameter.
-    ///   targets (array, optional) - targets parameter.
-    ///   value (string, optional) - value parameter.
-    ///
     public class SketchConstraintTool : IToolHandler
     {
         public string Name { get { return "nx_sketch_constraint"; } }
@@ -774,7 +676,6 @@ namespace NxMcpPlugin.Tools.Sketch
 
                 string key = constraintType.Trim().ToLowerInvariant();
 
-                // Validate constraint type
                 if (!GeometricConstraintTypes.Contains(key) && !DimensionalConstraintTypes.Contains(key))
                 {
                     var allValid = new List<string>(GeometricConstraintTypes);
@@ -791,7 +692,6 @@ namespace NxMcpPlugin.Tools.Sketch
 
                 if (GeometricConstraintTypes.Contains(key))
                 {
-                    // Resolve target curves
                     var curves = new List<dynamic>();
                     for (int i = 0; i < targetsArray.Count; i++)
                     {
@@ -802,7 +702,6 @@ namespace NxMcpPlugin.Tools.Sketch
                         curves.Add(curve);
                     }
 
-                    // Apply constraint using specific NXOpen methods
                     switch (key)
                     {
                         case "horizontal":
@@ -828,13 +727,11 @@ namespace NxMcpPlugin.Tools.Sketch
                         case "tangent":
                             if (curves.Count >= 2)
                             {
-                                // NX2412: Sketch.ConstraintGeometryHelpType.Curvature enum not available
-                                // in NX2412 managed API — use raw integer value 4 (Curvature).
                                 var help1 = new NXOpen.Sketch.ConstraintGeometryHelp(
-                                    (NXOpen.Sketch.ConstraintGeometryHelpType)4 /* Curvature */,
+                                    (NXOpen.Sketch.ConstraintGeometryHelpType)4,
                                     new NXOpen.Point3d(0, 0, 0), 0.0);
                                 var help2 = new NXOpen.Sketch.ConstraintGeometryHelp(
-                                    (NXOpen.Sketch.ConstraintGeometryHelpType)4 /* Curvature */,
+                                    (NXOpen.Sketch.ConstraintGeometryHelpType)4,
                                     new NXOpen.Point3d(0, 0, 0), 0.0);
                                 sketch.CreateTangentConstraint(
                                     SketchHelpers.CreateConstraintGeometry(curves[0]), help1,
@@ -848,8 +745,6 @@ namespace NxMcpPlugin.Tools.Sketch
                                     SketchHelpers.CreateConstraintGeometry(curves[1]));
                             break;
                         case "fix":
-                            // M0-20260912: iterate ALL targets — old code only fixed curves[0],
-                            // silently leaving the rest under-constrained (DOF>0 假成功).
                             foreach (var c in curves)
                                 sketch.CreateFixedConstraint(SketchHelpers.CreateConstraintGeometry(c));
                             break;
@@ -875,7 +770,6 @@ namespace NxMcpPlugin.Tools.Sketch
                 }
                 else
                 {
-                    // Dimensional constraint
                     if (targetsArray.Count < 2)
                         return ToolResult.Fail("Dimensional constraints require 2 target curves.").ToJson();
 
@@ -889,9 +783,6 @@ namespace NxMcpPlugin.Tools.Sketch
                         targetArray[i] = (NXObject)curve;
                     }
 
-                    // NX2412: Sketch.CreateDimension(NXObject[], double) overload does not exist.
-                    // Use UF_SKET_create_dimension (book ch9 pattern) — requires
-                    // InitializeSketch first and AssocType.EndPoint on dim objects (probed 2026-08-15).
                     UFSession uf = UFSession.GetUFSession();
                     string skName = sketch.Name;
                     NXOpen.Tag skTag = NXOpen.Tag.Null;
@@ -916,8 +807,6 @@ namespace NxMcpPlugin.Tools.Sketch
                     finally
                     {
                         uf.Sket.TerminateSketch();
-                        // TerminateSketch deactivates the sketch — re-activate for
-                        // subsequent drawing operations (verified 2026-08-15).
                         sketch.Activate(NXOpen.Sketch.ViewReorient.False);
                     }
                 }
@@ -941,10 +830,6 @@ namespace NxMcpPlugin.Tools.Sketch
     // 7. nx_finish_sketch
     // ========================================================================
 
-    /// <summary>
-    /// Finish (exit) the currently active sketch.
-    /// NX2412: Deactivate requires two arguments — ViewReorient and UpdateLevel.
-    /// </summary>
     public class FinishSketchTool : IToolHandler
     {
         public string Name { get { return "nx_finish_sketch"; } }
@@ -961,7 +846,6 @@ namespace NxMcpPlugin.Tools.Sketch
                 dynamic activeSketch = SketchHelpers.GetActiveSketch(workPart);
                 if (activeSketch != null)
                 {
-                    // NX2412: Deactivate requires two enum arguments, NOT raw bool/int
                     activeSketch.Deactivate(
                         NXOpen.Sketch.ViewReorient.False,
                         NXOpen.Sketch.UpdateLevel.Model);
@@ -980,14 +864,6 @@ namespace NxMcpPlugin.Tools.Sketch
     // 8. nx_sketch_trim
     // ========================================================================
 
-    /// <summary>
-    /// Trim sketch curves to their intersection points with boundary curves.
-    /// Uses Features.CreateTrimCurveBuilder for each curve.
-    ///
-    /// Parameters:
-    ///   curves_to_trim  (string[], required) -- Curves to trim (by name).
-    ///   boundary_curves (string[], optional) -- Boundary curves (default: all other curves).
-    /// </summary>
     public class SketchTrimTool : IToolHandler
     {
         public string Name { get { return "nx_sketch_trim"; } }
@@ -1013,19 +889,15 @@ namespace NxMcpPlugin.Tools.Sketch
                 if (boundaryNames == null || boundaryNames.Count == 0)
                     return ToolResult.Fail("Parameter 'boundary_curves' is required (array of curve names).").ToJson();
 
-                // Resolve curves to trim
                 string error;
                 var trimCurves = SketchHelpers.FindCurvesByName(workPart, trimNames, out error);
                 if (trimCurves == null)
                     return ToolResult.Fail(error).ToJson();
 
-                // Resolve boundary curves
                 var boundaryCurves = SketchHelpers.FindCurvesByName(workPart, boundaryNames, out error);
                 if (boundaryCurves == null)
                     return ToolResult.Fail(error).ToJson();
 
-                // NX2412: Features.CreateTrimCurveBuilder expects a TrimCurve FEATURE, not a
-                // raw curve. Use the sketch-native QuickTrimBuilder (probed 2026-08-15).
                 dynamic builder = workPart.Sketches.CreateQuickTrimBuilder();
                 var trimmed = new JArray();
                 try
@@ -1066,14 +938,6 @@ namespace NxMcpPlugin.Tools.Sketch
     // 9. nx_sketch_spline
     // ========================================================================
 
-    /// <summary>
-    /// Create a spline curve through a series of points in the active sketch.
-    /// Uses Curves.CreateSplineByPoints with a Point3d array.
-    ///
-    /// Parameters:
-    ///   points (array, required)  -- List of [x, y] points (sketch-local) the spline passes through.
-    ///   closed (boolean, optional) -- Close the spline (default false).
-    /// </summary>
     public class SketchSplineTool : IToolHandler
     {
         public string Name { get { return "nx_sketch_spline"; } }
@@ -1097,7 +961,6 @@ namespace NxMcpPlugin.Tools.Sketch
 
                 bool closed = SketchHelpers.GetParamBool(p, "closed", false);
 
-                // Build point array (all points lie in the sketch plane, z=0)
                 var nxPoints = new NXOpen.Point3d[pointsArray.Count];
                 var pointsJArray = new JArray();
                 for (int i = 0; i < pointsArray.Count; i++)
@@ -1112,14 +975,10 @@ namespace NxMcpPlugin.Tools.Sketch
                     pointsJArray.Add(new JArray(px, py));
                 }
 
-                // NX2412: no CurveCollection spline API; UF struct marshaling broken (both probed
-                // 2026-08-15). Use StudioSplineBuilder ThroughPoints — verified end-to-end.
                 dynamic ssb = workPart.Features.CreateStudioSplineBuilder(null);
                 NXOpen.Spline spline = null;
                 try
                 {
-                    // Tag watermark: StudioSplineBuilder.Commit() returns null — find the
-                    // created spline as the highest-tagged NEW spline after commit.
                     ulong maxBefore = 0;
                     foreach (dynamic c in workPart.Curves)
                     {
@@ -1165,8 +1024,6 @@ namespace NxMcpPlugin.Tools.Sketch
                     return ToolResult.Fail("Spline creation failed.").ToJson();
 
                 sketch.AddGeometry(spline);
-
-                // Re-activate sketch for subsequent operations
                 sketch.Activate(NXOpen.Sketch.ViewReorient.False);
 
                 var data = new JObject();
@@ -1189,14 +1046,6 @@ namespace NxMcpPlugin.Tools.Sketch
     // 10. nx_sketch_mirror
     // ========================================================================
 
-    /// <summary>
-    /// Mirror sketch geometry across a centerline.
-    /// Uses Curves.CreateMirrorCurve for each curve, then adds results to the sketch.
-    ///
-    /// Parameters:
-    ///   curves     (string[], required) -- Curves to mirror (by name).
-    ///   centerline (string, required)   -- Centerline curve name (mirror axis).
-    /// </summary>
     public class SketchMirrorTool : IToolHandler
     {
         public string Name { get { return "nx_sketch_mirror"; } }
@@ -1222,20 +1071,15 @@ namespace NxMcpPlugin.Tools.Sketch
                 if (string.IsNullOrEmpty(centerlineName))
                     return ToolResult.Fail("Parameter 'centerline' is required.").ToJson();
 
-                // Resolve curves to mirror
                 string error;
                 var mirrorCurves = SketchHelpers.FindCurvesByName(workPart, curveNames, out error);
                 if (mirrorCurves == null)
                     return ToolResult.Fail(error).ToJson();
 
-                // Resolve centerline
                 dynamic centerlineCurve = SketchHelpers.FindCurveByName(workPart, centerlineName);
                 if (centerlineCurve == null)
                     return ToolResult.Fail(string.Format("Centerline '{0}' not found.", centerlineName)).ToJson();
 
-                // NX2412: Curves.CreateMirrorCurve does not exist. Use the associative
-                // SketchMirrorPatternBuilder (probed 2026-08-15). NOTE: Section property is
-                // READ-ONLY — add curves via builder.Section.AddToSection() (verified 2026-08-15).
                 var ruleCurves = new NXOpen.Curve[mirrorCurves.Count];
                 for (int i = 0; i < mirrorCurves.Count; i++)
                     ruleCurves[i] = (NXOpen.Curve)mirrorCurves[i];
@@ -1249,7 +1093,6 @@ namespace NxMcpPlugin.Tools.Sketch
                 {
                     mb.Section.AddToSection(rules, ruleCurves[0], null, null, seedHelp,
                         NXOpen.Section.Mode.Create, false);
-                    // DirectionObject is a SINGLE SelectNXObject — assign via .Value (2026-08-15)
                     mb.DirectionObject.Value = (NXOpen.NXObject)centerlineCurve;
                     mb.CreateConstraint = true;
                     dynamic result = mb.Commit();
@@ -1284,18 +1127,6 @@ namespace NxMcpPlugin.Tools.Sketch
     // 11. nx_sketch_ellipse
     // ========================================================================
 
-    /// <summary>
-    /// Create an ellipse in the active sketch.
-    /// Uses Curves.CreateEllipseBuilder with center, major/minor radii, and rotation angle.
-    /// Rotation angle is converted from degrees to radians.
-    ///
-    /// Parameters:
-    ///   cx             (number, required) -- Center X (sketch-local).
-    ///   cy             (number, required) -- Center Y (sketch-local).
-    ///   major_radius   (number, required) -- Major radius.
-    ///   minor_radius   (number, required) -- Minor radius.
-    ///   rotation_angle (number, optional) -- Rotation in degrees (default 0).
-    /// </summary>
     public class SketchEllipseTool : IToolHandler
     {
         public string Name { get { return "nx_sketch_ellipse"; } }
@@ -1322,8 +1153,6 @@ namespace NxMcpPlugin.Tools.Sketch
                 dynamic center = SketchHelpers.MapToWorld(sketch, cx, cy);
                 double rotationRad = rotationAngle * Math.PI / 180.0;
 
-                // NX2412: CreateEllipseBuilder does not exist — use Curves.CreateEllipse (probed 2026-08-15).
-                // Rotation is applied INSIDE the sketch plane: xDir/yDir = sketch axes rotated by rotationRad.
                 NXOpen.Vector3d sx, sy;
                 SketchHelpers.GetSketchAxes(sketch, out sx, out sy);
                 double cosR = Math.Cos(rotationRad), sinR = Math.Sin(rotationRad);
@@ -1340,8 +1169,6 @@ namespace NxMcpPlugin.Tools.Sketch
                 string curveName = (curve != null ? curve.Name : null) ?? "Ellipse";
 
                 sketch.AddGeometry(curve);
-
-                // Re-activate sketch for subsequent operations
                 sketch.Activate(NXOpen.Sketch.ViewReorient.False);
 
                 var data = new JObject();
@@ -1366,16 +1193,6 @@ namespace NxMcpPlugin.Tools.Sketch
     // 12. nx_sketch_offset
     // ========================================================================
 
-    /// <summary>
-    /// Offset sketch curves by a specified distance.
-    /// Uses Curves.CreateOffsetCurveBuilder for each curve.
-    /// Side parameter: 'left', 'right', or 'both' (default 'right').
-    ///
-    /// Parameters:
-    ///   curves   (string[], required) -- Curves to offset (by name).
-    ///   distance (number, required)   -- Offset distance (mm; sign depends on side).
-    ///   side     (string, optional)   -- 'left', 'right', or 'both' (default 'right').
-    /// </summary>
     public class SketchOffsetTool : IToolHandler
     {
         public string Name { get { return "nx_sketch_offset"; } }
@@ -1406,15 +1223,11 @@ namespace NxMcpPlugin.Tools.Sketch
                 if (sideKey != "left" && sideKey != "right" && sideKey != "both")
                     return ToolResult.Fail(string.Format("Invalid side '{0}'. Use 'left', 'right', or 'both'.", side)).ToJson();
 
-                // Resolve curves to offset
                 string error;
                 var offsetCurves = SketchHelpers.FindCurvesByName(workPart, curveNames, out error);
                 if (offsetCurves == null)
                     return ToolResult.Fail(error).ToJson();
 
-                // NX2412: Features.CreateOffsetCurveBuilder expects a Feature (null = new);
-                // passing a Curve caused the overload mismatch. Side is implicit:
-                // negative OffsetDistance offsets to the other side (probed 2026-08-15).
                 double[] signedDistances;
                 if (sideKey == "left")
                     signedDistances = new double[] { -Math.Abs(distance) };
@@ -1428,8 +1241,6 @@ namespace NxMcpPlugin.Tools.Sketch
                 {
                     foreach (double signed in signedDistances)
                     {
-                        // Tag watermark: OffsetCurveBuilder.Commit returns a FEATURE, not curves —
-                        // find the created offset curves as new curves after commit (2026-08-15).
                         ulong maxBefore = 0;
                         foreach (dynamic c in workPart.Curves)
                         {
@@ -1448,12 +1259,8 @@ namespace NxMcpPlugin.Tools.Sketch
                         dynamic builder = workPart.Features.CreateOffsetCurveBuilder(null);
                         try
                         {
-                            // CurvesToOffset is a READ-ONLY Section — add via AddToSection (2026-08-15)
                             builder.CurvesToOffset.AddToSection(rules, ruleCurves[0], null, null,
                                 SketchHelpers.FirstPoint(ruleCurves[0]), NXOpen.Section.Mode.Create, false);
-                            // Single straight line has no offset plane — provide a plane point
-                            // NOT collinear with the line (errors verified 2026-08-15:
-                            // "输入的曲线构成一直线" / "定义的点与输入的线串共线").
                             NXOpen.Point3d planePt = SketchHelpers.FirstPoint(ruleCurves[0]);
                             NXOpen.Line ln0 = ruleCurves[0] as NXOpen.Line;
                             if (ln0 != null)
@@ -1471,8 +1278,6 @@ namespace NxMcpPlugin.Tools.Sketch
                             builder.Commit();
                             builder.Destroy();
 
-                            // The offset FEATURE commit exits the sketch environment
-                            // ("草图未初始化") — re-activate before AddGeometry (2026-08-15).
                             sketch.Activate(NXOpen.Sketch.ViewReorient.False);
 
                             foreach (dynamic c in workPart.Curves)
@@ -1516,10 +1321,6 @@ namespace NxMcpPlugin.Tools.Sketch
 
 namespace NxMcpPlugin.Tools.Sketch
 {
-    // ========================================================================
-    // List all sketch names
-    // ========================================================================
-
     public class ListSketchesTool : IToolHandler
     {
         public string Name { get { return "nx_list_sketches"; } }
@@ -1552,19 +1353,6 @@ namespace NxMcpPlugin.Tools.Sketch
     // 15. nx_sketch_fillet
     // ========================================================================
 
-    /// <summary>
-    /// Create a fillet (rounded corner) between two sketch curves.
-    /// Uses SketchCollection.CreateFilletBuilder() (NX2312+ internal API).
-    /// Verified 2026-08-04 (反编译 + 实测):
-    ///   CurvesToFillet = SelectNXObjectList.Add(NXObject)
-    ///   FilletRadius = Expression.Value, CreateRadiusDimension (bool), LockRadius (bool)
-    ///   ThirdCurve (NXObject) + DeleteThirdCurve (bool) for 3-curve fillets
-    ///
-    /// Parameters:
-    ///   radius           (number, required)   -- Fillet radius.
-    ///   curves           (string[], required) -- 2 or 3 curves to fillet (by name).
-    ///   create_dimension (boolean, optional)  -- Create radius dimension (default false).
-    /// </summary>
     public class SketchFilletTool : IToolHandler
     {
         public string Name { get { return "nx_sketch_fillet"; } }
@@ -1597,15 +1385,9 @@ namespace NxMcpPlugin.Tools.Sketch
 
                 bool createDimension = SketchHelpers.GetParamBool(p, "create_dimension", false);
 
-                // NX2412: CreateFilletBuilder is gated by an internal feature switch
-                // ("控制此功能的功能开关未激活"). Use the PUBLIC Sketch.Fillet() API
-                // (probed 2026-08-15 — requires explicit typing because of the out parameter).
-                // 2-curve fillet only; 3-curve overloads need extra DeleteThirdCurveOption.
                 NXOpen.Sketch sk = (NXOpen.Sketch)sketch;
                 NXOpen.Curve c1 = (NXOpen.Curve)curves[0];
                 NXOpen.Curve c2 = (NXOpen.Curve)curves[1];
-                // Help points must lie ON each curve near the corner (NOT the corner itself):
-                // verified 2026-08-15 — corner/center points → "无法求解圆角", on-curve points OK.
                 NXOpen.Point3d corner = SketchHelpers.ComputeCornerPoint(c1, c2);
                 NXOpen.Point3d help1 = SketchHelpers.PointOnCurveNear(c1, corner);
                 NXOpen.Point3d help2 = SketchHelpers.PointOnCurveNear(c2, corner);
@@ -1642,22 +1424,6 @@ namespace NxMcpPlugin.Tools.Sketch
     // 16. nx_sketch_chamfer
     // ========================================================================
 
-    /// <summary>
-    /// Create a chamfer between two sketch curves.
-    /// Uses SketchCollection.CreateSketchChamferBuilder() (NX7.5+ public API).
-    /// Verified 2026-08-04 (反编译 + 实测):
-    ///   CurvesToChamfer = SelectDisplayableObjectList.Add(DisplayableObject)
-    ///   ChamferOption = ChamferOptions.Symmetric/Asymmetric/OffsetandAngle
-    ///   Distance1/Distance2/Angle = Expression.Value, TrimInputCurves (bool)
-    ///
-    /// Parameters:
-    ///   curves           (string[], required) -- Curves to chamfer (by name).
-    ///   option           (string, optional)   -- symmetric (default), asymmetric, offsetandangle.
-    ///   distance1        (number, optional)   -- First offset (symmetric/asymmetric).
-    ///   distance2        (number, optional)   -- Second offset (asymmetric).
-    ///   angle            (number, optional)   -- Chamfer angle in degrees (offsetandangle).
-    ///   trim_input_curves (boolean, optional) -- Trim input curves (default true).
-    /// </summary>
     public class SketchChamferTool : IToolHandler
     {
         public string Name { get { return "nx_sketch_chamfer"; } }
@@ -1690,7 +1456,6 @@ namespace NxMcpPlugin.Tools.Sketch
                 double angle = SketchHelpers.GetParamDouble(p, "angle", 45.0);
                 bool trim = SketchHelpers.GetParamBool(p, "trim_input_curves", true);
 
-                // Factory is on SketchCollection (workPart.Sketches), NOT on Sketch — 反编译验证
                 dynamic builder = workPart.Sketches.CreateSketchChamferBuilder();
                 try
                 {
