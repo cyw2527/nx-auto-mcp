@@ -1,0 +1,179 @@
+{
+  "version": "1.0",
+  "description": "Cross-agent rule definitions for NX intent validation",
+  "rules": [
+    {
+      "id": "rule-hole-edge-clearance",
+      "name": "Hole Edge Clearance Check",
+      "description": "Minimum distance from hole center to part edge >= 2x hole diameter",
+      "severity": "error",
+      "applies_to_intents": ["create_hole"],
+      "check_type": "hole_edge_clearance",
+      "params": {
+        "min_multiplier": 2.0
+      }
+    },
+    {
+      "id": "rule-hole-wall-thickness",
+      "name": "Hole Wall Thickness Check",
+      "description": "Minimum wall thickness from hole to outer wall >= 1.5mm",
+      "severity": "error",
+      "status": "parameter_unavailable",
+      "applies_to_intents": ["create_hole"],
+      "check_type": "hole_wall_thickness",
+      "params": {
+        "min_thickness": 1.5
+      }
+    },
+    {
+      "id": "rule-hole-to-hole",
+      "name": "Hole Spacing Check",
+      "description": "Center distance between any two holes - (r1+r2) >= 2mm",
+      "severity": "error",
+      "applies_to_intents": ["create_hole", "create_pattern"],
+      "check_type": "hole_to_hole_spacing",
+      "params": {
+        "min_multiplier": 2.0,
+        "fallback_min_distance": 2.0
+      }
+    },
+    {
+      "id": "rule-hole-diameter-valid",
+      "name": "Hole Diameter Validity",
+      "description": "Hole diameter must be within a reasonable range (0.5mm - 500mm)",
+      "severity": "warning",
+      "applies_to_intents": ["create_hole"],
+      "check_type": "hole_diameter_range",
+      "params": {
+        "min_diameter": 0.5,
+        "max_diameter": 500.0
+      }
+    },
+    {
+      "id": "rule-hole-depth-ratio",
+      "name": "Depth-to-Diameter Ratio Check",
+      "description": "Hole depth / hole diameter <= 10 (exceeding this makes machining difficult)",
+      "severity": "warning",
+      "applies_to_intents": ["create_hole"],
+      "check_type": "hole_depth_ratio",
+      "params": {
+        "max_ratio": 10.0
+      }
+    },
+    {
+      "id": "rule-chamfer-on-thin-wall",
+      "name": "Chamfer Wall Thickness Check",
+      "description": "Chamfer distance must not exceed half the wall thickness",
+      "severity": "error",
+      "status": "parameter_unavailable",
+      "applies_to_intents": ["create_chamfer"],
+      "check_type": "chamfer_wall_thickness",
+      "params": {
+        "max_fraction": 0.5
+      }
+    },
+    {
+      "id": "rule-chamfer-overlap",
+      "name": "Chamfer Overlap Check",
+      "description": "Chamfer projections on adjacent edges should not overlap",
+      "severity": "warning",
+      "applies_to_intents": ["create_chamfer"],
+      "check_type": "chamfer_overlap",
+      "params": {
+        "max_empirical_distance": 10.0,
+        "overlap_warning_fraction": 0.8
+      }
+    },
+    {
+      "id": "rule-fillet-vs-wall",
+      "name": "Fillet Wall Thickness Check",
+      "description": "Fillet radius <= wall thickness * 0.8",
+      "severity": "error",
+      "status": "parameter_unavailable",
+      "applies_to_intents": ["create_fillet"],
+      "check_type": "fillet_vs_wall",
+      "params": {
+        "max_fraction": 0.8
+      }
+    },
+    {
+      "id": "rule-fillet-chain",
+      "name": "Fillet Chain Compatibility",
+      "description": "Fillet radius < shortest adjacent edge / 3",
+      "severity": "warning",
+      "status": "parameter_unavailable",
+      "applies_to_intents": ["create_fillet"],
+      "check_type": "fillet_chain",
+      "params": {
+        "max_radius_fraction": 0.333,
+        "max_radius_ratio": 3.0,
+        "warning_fraction": 0.8
+      }
+    },
+    {
+      "id": "rule-extrude-body-exists",
+      "name": "Body Existence Check",
+      "description": "Target body must exist for subtract/intersect operations",
+      "severity": "error",
+      "applies_to_intents": ["create_extrude", "create_pocket"],
+      "check_type": "extrude_body_exists",
+      "params": {}
+    },
+    {
+      "id": "rule-extrude-positive-distance",
+      "name": "Extrude Distance Check",
+      "description": "Extrude distance must be positive",
+      "severity": "error",
+      "applies_to_intents": ["create_extrude"],
+      "check_type": "extrude_positive_distance",
+      "params": {}
+    },
+    {
+      "id": "rule-shell-min-thickness",
+      "name": "Minimum Shell Thickness Check",
+      "description": "Shell thickness >= 0.5mm",
+      "severity": "error",
+      "applies_to_intents": ["create_shell"],
+      "check_type": "shell_min_thickness",
+      "params": {
+        "min_thickness": 0.5
+      }
+    },
+    {
+      "id": "rule-draft-angle",
+      "name": "Draft Angle Check",
+      "description": "Draft angle must be between 0 and 30 degrees",
+      "severity": "error",
+      "applies_to_intents": ["create_draft"],
+      "check_type": "draft_angle_range",
+      "params": {
+        "min_angle": 0.0,
+        "max_angle": 30.0
+      }
+    },
+    {
+      "id": "rule-pattern-bounds",
+      "name": "Pattern Bounds Check",
+      "description": "Pattern instances must be within the part bounding box",
+      "severity": "error",
+      "applies_to_intents": ["create_pattern"],
+      "check_type": "pattern_bounds",
+      "params": {
+        "max_empirical_span": 500.0
+      }
+    },
+    {
+      "id": "rule-thread-hole-match",
+      "name": "Thread Pilot Hole Match",
+      "description": "Thread specification must match pilot hole diameter and pitch (GB/T 196-2003)",
+      "severity": "error",
+      "status": "parameter_unavailable",
+      "applies_to_intents": ["create_thread"],
+      "check_type": "thread_hole_match",
+      "params": {
+        "tolerance": 0.15,
+        "pitch_tolerance": 0.05
+      }
+    }
+  ]
+}
