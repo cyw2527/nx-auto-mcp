@@ -2,6 +2,13 @@
 
 **中文** | [English](README.md)
 
+> **nx-auto-mcp** 是一个西门子 NX MCP 服务器，让 AI 助手通过 [Model Context Protocol](https://modelcontextprotocol.io) 直接操作 Siemens NX。项目提供 130+ CAD 工具（建模、草图、装配、测量、检查、钣金等），支持 Claude Code、Cursor 等任意 MCP 客户端调用。
+>
+> - **GitHub**: https://github.com/cyw2527/nx-auto-mcp
+> - **关键词**: Siemens NX MCP, NX MCP Server, 西门子 NX 自动化, NXOpen, CAD AI, Model Context Protocol
+> - **架构**: MCP stdio 适配器 (Node.js) → TCP 1977 → NX 插件 (C# / NXOpen)
+> - **延迟**: 单次工具调用 10–50 ms（常驻进程，无 journal 启动开销）
+
 把 Siemens NX 变成 AI Agent 可以直接操作的对象。通过 MCP（Model Context Protocol）把 NX 的建模、草图、装配、测量等能力暴露成工具，Claude Code / 任何 MCP 客户端即可直接调用。
 
 ```
