@@ -119,6 +119,7 @@ namespace NxMcpPlugin.Tools.Validate
         // --------------------------------------------------------------------
         // TOPO-002: Face orientation check
         // NX2412: face.GetParameters/GetNormal/Position don't exist.
+        // UF.Sf.FaceEvaluateParamLocation doesn't work with OM face tags.
         // Return SKIP - this check is not available in NX2412.
         // --------------------------------------------------------------------
         public static JObject CheckFaceOrientation(dynamic body)
@@ -145,6 +146,7 @@ namespace NxMcpPlugin.Tools.Validate
             {
                 try
                 {
+                    // NX2412: ModlGeneral.AskBoundingBox doesn't exist. Skip size box check.
                     double[] bb = null;
                     if (bb != null && bb.Length >= 6)
                     {
@@ -181,7 +183,8 @@ namespace NxMcpPlugin.Tools.Validate
 
         // --------------------------------------------------------------------
         // MFG-002: Tolerant edge detection
-        // NX2412: edge.Tolerance doesn't exist.
+        // NX2412: edge.Tolerance doesn't exist. UF.Sf.EdgeAskTolerances doesn't exist either.
+        // Return empty list.
         // --------------------------------------------------------------------
         public static JArray CheckTolerantEdges(dynamic body)
         {
@@ -339,7 +342,7 @@ namespace NxMcpPlugin.Tools.Validate
             {
                 try
                 {
-                    string ct = edge.EdgeType.ToString();
+                    string ct = edge.EdgeType.ToString(); // NX2412: SolidEdgeType removed, use EdgeType
                     if (ct.Contains("Arc") || ct.Contains("Circle"))
                     {
                         try
@@ -503,8 +506,9 @@ namespace NxMcpPlugin.Tools.Validate
                     return ToolResult.Fail(string.Format("Invalid validation_type '{0}'. Use one of: {1}.", vtypeParam, valid)).ToJson();
                 }
 
+                // Try to get UF session for geometry checks
                 UFSession ufs = null;
-                try { ufs = UFSession.GetUFSession(); } catch { }
+                try { ufs = UFSession.GetUFSession(); } catch { /* UF may not be available */ }
 
                 var checks = new JObject();
                 var allIssues = new JArray();
@@ -691,6 +695,7 @@ namespace NxMcpPlugin.Tools.Validate
                 if (workPart == null)
                     return ToolResult.Fail("No work part is open.").ToJson();
 
+                // Find feature by name (case-insensitive)
                 dynamic target = null;
                 var features = workPart.Features;
                 foreach (dynamic feat in features)
@@ -712,7 +717,8 @@ namespace NxMcpPlugin.Tools.Validate
                         available.Add(f.Name.ToString());
                         count++;
                     }
-                    var notFoundData = new JObject() { { "available_features", available } };
+                    var notFoundData = new JObject() { { "available_features", available
+                     } };
                     return new ToolResult
                     {
                         Success = false,
@@ -723,6 +729,7 @@ namespace NxMcpPlugin.Tools.Validate
 
                 var issues = new JArray();
 
+                // Check if feature is suppressed
                 try
                 {
                     if ((bool)target.IsSuppressed)
@@ -734,8 +741,9 @@ namespace NxMcpPlugin.Tools.Validate
                         });
                     }
                 }
-                catch { }
+                catch { /* IsSuppressed may not be available */ }
 
+                // Check feature health status
                 try
                 {
                     string statusStr = target.GetHealthStatus().ToString();
@@ -748,8 +756,9 @@ namespace NxMcpPlugin.Tools.Validate
                         });
                     }
                 }
-                catch { }
+                catch { /* GetHealthStatus may fail */ }
 
+                // Get output bodies and check validity
                 try
                 {
                     var bodies = target.GetBodies();
@@ -758,6 +767,7 @@ namespace NxMcpPlugin.Tools.Validate
                     {
                         hasBodies = true;
 
+                        // Check manifold for solid bodies
                         try
                         {
                             if ((bool)body.IsSolidBody)
@@ -777,8 +787,9 @@ namespace NxMcpPlugin.Tools.Validate
                                 }
                             }
                         }
-                        catch { }
+                        catch { /* IsSolidBody may fail */ }
 
+                        // Check for degenerate faces via bounding box approximation
                         try
                         {
                             UFSession ufs = UFSession.GetUFSession();
@@ -788,7 +799,7 @@ namespace NxMcpPlugin.Tools.Validate
                                 try
                                 {
                                     double[] bb = new double[6];
-                                    ufs.Sf.FaceAskBoundingBox(face.Tag, bb);
+                        ufs.Sf.FaceAskBoundingBox(face.Tag, bb);
                                     double? area = null;
                                     if (bb != null && bb.Length >= 6)
                                     {
@@ -809,10 +820,10 @@ namespace NxMcpPlugin.Tools.Validate
                                         });
                                     }
                                 }
-                                catch { }
+                                catch { /* skip individual face */ }
                             }
                         }
-                        catch { }
+                        catch { /* UFSession or GetFaces may fail */ }
                     }
 
                     if (!hasBodies)
@@ -824,8 +835,9 @@ namespace NxMcpPlugin.Tools.Validate
                         });
                     }
                 }
-                catch { }
+                catch { /* GetBodies may fail */ }
 
+                // Collect feature parameters for reference
                 var parametersDict = new JObject();
                 try
                 {
@@ -841,12 +853,13 @@ namespace NxMcpPlugin.Tools.Validate
                         catch
                         {
                             try { parametersDict[expr.Name.ToString()] = expr.RightHandSide.ToString(); }
-                            catch { }
+                            catch { /* skip */ }
                         }
                     }
                 }
-                catch { }
+                catch { /* GetExpressions may fail */ }
 
+                // Determine overall status
                 string overall = "PASS";
                 foreach (var issue in issues)
                 {
