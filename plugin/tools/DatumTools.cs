@@ -86,6 +86,7 @@ namespace NxMcpPlugin.Tools.Datum
                     if (principalType != "XY" && principalType != "XZ" && principalType != "YZ")
                         return ToolResult.Fail(string.Format("Invalid principal_type: {0}. Must be XY, XZ, or YZ.", principalType)).ToJson();
 
+                    // NX2412: Point3d is a struct — must use 'new' keyword
                     dynamic origin = new NXOpen.Point3d(0.0, 0.0, 0.0);
                     dynamic orientation = new NXOpen.Matrix3x3();
 
@@ -119,6 +120,7 @@ namespace NxMcpPlugin.Tools.Datum
                     if (face == null)
                         return ToolResult.Fail(string.Format("Could not resolve face/object: {0}", reference)).ToJson();
 
+                    // NX2412: DatumCollection.CreateDatumPlane was removed — use builder pattern
                     dynamic planeBuilder = workPart.Features.CreateDatumPlaneBuilder(null);
                     planeBuilder.SetFaceAndOffset(face, offsetDistance);
                     plane = planeBuilder.Commit();
@@ -133,6 +135,7 @@ namespace NxMcpPlugin.Tools.Datum
                     if (face == null)
                         return ToolResult.Fail(string.Format("Could not resolve face/object: {0}", reference)).ToJson();
 
+                    // NX2412: DatumCollection.CreateDatumPlane was removed — use builder pattern
                     dynamic planeBuilder = workPart.Features.CreateDatumPlaneBuilder(null);
                     planeBuilder.Face = face;
                     plane = planeBuilder.Commit();
@@ -257,6 +260,7 @@ namespace NxMcpPlugin.Tools.Datum
                     if (edge == null)
                         return ToolResult.Fail(string.Format("Could not resolve edge: {0}", reference)).ToJson();
 
+                    // NX2412: DatumCollection.CreateDatumAxis was removed — use builder pattern
                     dynamic axisBuilder = workPart.Features.CreateDatumAxisBuilder(null);
                     axisBuilder.Geometry = edge;
                     axis = axisBuilder.Commit();
@@ -271,6 +275,7 @@ namespace NxMcpPlugin.Tools.Datum
                     if (face == null)
                         return ToolResult.Fail(string.Format("Could not resolve face: {0}", reference)).ToJson();
 
+                    // NX2412: DatumCollection.CreateDatumAxis was removed — use builder pattern
                     dynamic axisBuilder = workPart.Features.CreateDatumAxisBuilder(null);
                     axisBuilder.Geometry = face;
                     axis = axisBuilder.Commit();
@@ -349,6 +354,7 @@ namespace NxMcpPlugin.Tools.Datum
                 double oz = DatumParams.GetParamDouble(parameters, "origin_z", 0.0);
                 string csysName = DatumParams.GetParamString(parameters, "csys_name", "");
 
+                // Parse axis vectors
                 JArray xAxisArr = DatumParams.GetParamArray(parameters, "x_axis");
                 JArray yAxisArr = DatumParams.GetParamArray(parameters, "y_axis");
 
@@ -360,16 +366,19 @@ namespace NxMcpPlugin.Tools.Datum
                     ? new[] { yAxisArr[0].Value<double>(), yAxisArr[1].Value<double>(), yAxisArr[2].Value<double>() }
                     : new[] { 0.0, 1.0, 0.0 };
 
+                // Normalize X axis
                 double xLen = Math.Sqrt(xAxis[0] * xAxis[0] + xAxis[1] * xAxis[1] + xAxis[2] * xAxis[2]);
                 if (xLen < 1e-10)
                     return ToolResult.Fail("X-axis vector is zero.").ToJson();
                 double[] xNorm = { xAxis[0] / xLen, xAxis[1] / xLen, xAxis[2] / xLen };
 
+                // Normalize Y axis
                 double yLen = Math.Sqrt(yAxis[0] * yAxis[0] + yAxis[1] * yAxis[1] + yAxis[2] * yAxis[2]);
                 if (yLen < 1e-10)
                     return ToolResult.Fail("Y-axis vector is zero.").ToJson();
                 double[] yNorm = { yAxis[0] / yLen, yAxis[1] / yLen, yAxis[2] / yLen };
 
+                // Z = X cross Y
                 double[] zCross = {
                     xNorm[1] * yNorm[2] - xNorm[2] * yNorm[1],
                     xNorm[2] * yNorm[0] - xNorm[0] * yNorm[2],
@@ -380,32 +389,39 @@ namespace NxMcpPlugin.Tools.Datum
                     return ToolResult.Fail("X and Y axes are parallel.").ToJson();
                 double[] zNorm = { zCross[0] / zLen, zCross[1] / zLen, zCross[2] / zLen };
 
+                // Re-orthogonalize Y = Z cross X
                 yNorm = new double[] {
                     zNorm[1] * xNorm[2] - zNorm[2] * xNorm[1],
                     zNorm[2] * xNorm[0] - zNorm[0] * xNorm[2],
                     zNorm[0] * xNorm[1] - zNorm[1] * xNorm[0]
                 };
 
+                // NX2412: Point3d is a struct — must use 'new' keyword
                 dynamic origin = new NXOpen.Point3d(ox, oy, oz);
 
+                // Create XY plane (normal = Z)
                 dynamic oXy = new NXOpen.Matrix3x3();
                 oXy.Xx = 1.0; oXy.Xy = 0.0; oXy.Xz = 0.0;
                 oXy.Yx = 0.0; oXy.Yy = 1.0; oXy.Yz = 0.0;
                 oXy.Zx = 0.0; oXy.Zy = 0.0; oXy.Zz = 1.0;
                 dynamic planeXy = workPart.Datums.CreateFixedDatumPlane(origin, oXy);
 
+                // Create XZ plane (normal = Y)
                 dynamic oXz = new NXOpen.Matrix3x3();
                 oXz.Xx = 1.0; oXz.Xy = 0.0; oXz.Xz = 0.0;
                 oXz.Yx = 0.0; oXz.Yy = 0.0; oXz.Yz = 1.0;
                 oXz.Zx = 0.0; oXz.Zy = -1.0; oXz.Zz = 0.0;
                 dynamic planeXz = workPart.Datums.CreateFixedDatumPlane(origin, oXz);
 
+                // Create YZ plane (normal = X)
                 dynamic oYz = new NXOpen.Matrix3x3();
                 oYz.Xx = 0.0; oYz.Xy = 1.0; oYz.Xz = 0.0;
                 oYz.Yx = 0.0; oYz.Yy = 0.0; oYz.Yz = 1.0;
                 oYz.Zx = 1.0; oYz.Zy = 0.0; oYz.Zz = 0.0;
                 dynamic planeYz = workPart.Datums.CreateFixedDatumPlane(origin, oYz);
 
+                // Create X axis
+                // NX2412: CreateFixedDatumAxisBuilder does not exist — use CreateDatumAxisBuilder + SetPointAndDirection
                 dynamic axisXPoint = workPart.Points.CreatePoint(origin);
                 dynamic axisXDirection = workPart.Directions.CreateDirection(origin, new NXOpen.Vector3d(xNorm[0], xNorm[1], xNorm[2]), 0);
                 dynamic axisXBuilder = workPart.Features.CreateDatumAxisBuilder(null);
@@ -413,6 +429,8 @@ namespace NxMcpPlugin.Tools.Datum
                 dynamic axisX = axisXBuilder.Commit();
                 axisXBuilder.Destroy();
 
+                // Create Y axis
+                // NX2412: CreateFixedDatumAxisBuilder does not exist — use CreateDatumAxisBuilder + SetPointAndDirection
                 dynamic axisYPoint = workPart.Points.CreatePoint(origin);
                 dynamic axisYDirection = workPart.Directions.CreateDirection(origin, new NXOpen.Vector3d(yNorm[0], yNorm[1], yNorm[2]), 0);
                 dynamic axisYBuilder = workPart.Features.CreateDatumAxisBuilder(null);
@@ -420,6 +438,8 @@ namespace NxMcpPlugin.Tools.Datum
                 dynamic axisY = axisYBuilder.Commit();
                 axisYBuilder.Destroy();
 
+                // Create Z axis
+                // NX2412: CreateFixedDatumAxisBuilder does not exist — use CreateDatumAxisBuilder + SetPointAndDirection
                 dynamic axisZPoint = workPart.Points.CreatePoint(origin);
                 dynamic axisZDirection = workPart.Directions.CreateDirection(origin, new NXOpen.Vector3d(zNorm[0], zNorm[1], zNorm[2]), 0);
                 dynamic axisZBuilder = workPart.Features.CreateDatumAxisBuilder(null);
@@ -427,6 +447,7 @@ namespace NxMcpPlugin.Tools.Datum
                 dynamic axisZ = axisZBuilder.Commit();
                 axisZBuilder.Destroy();
 
+                // Name them
                 if (!string.IsNullOrEmpty(csysName))
                 {
                     planeXy.SetName(string.Format("{0}_XY", csysName));
@@ -464,6 +485,17 @@ namespace NxMcpPlugin.Tools.Datum
     /// Supports methods: coordinates (from XYZ values), intersection (two curves/edges),
     /// projection (project a point/curve along a direction), and midpoint (midpoint of an edge/curve).
     /// </summary>
+    ///
+    /// Parameters:
+    ///   method     (string, optional) -- coordinates (default), intersection, projection, midpoint.
+    ///   x          (number, optional) -- X for coordinates method.
+    ///   y          (number, optional) -- Y for coordinates method.
+    ///   z          (number, optional) -- Z for coordinates method.
+    ///   reference1 (string, optional) -- First curve/edge/point reference.
+    ///   reference2 (string, optional) -- Second reference (intersection/projection).
+    ///   direction  (string, optional) -- Direction for projection method.
+    ///   point_name (string, optional) -- Point name.
+    /// </summary>
     public class CreatePointTool : IToolHandler
     {
         public string Name { get { return "nx_create_point"; } }
@@ -493,6 +525,7 @@ namespace NxMcpPlugin.Tools.Datum
 
                 if (method == "coordinates")
                 {
+                    // NX2412: Point3d is a struct — must use 'new' keyword
                     dynamic origin = new NXOpen.Point3d(x, y, z);
                     point = workPart.Points.CreatePoint(origin);
                 }
@@ -509,6 +542,8 @@ namespace NxMcpPlugin.Tools.Datum
                     if (obj2 == null)
                         return ToolResult.Fail(string.Format("Could not resolve reference2: '{0}'.", ref2)).ToJson();
 
+                    // FIXME(NX2412): PointCollection.CreatePointBuilder only exists on Diagramming, not geometry.
+                    // NX2412 has no direct equivalent — reimplement using datum point builder or workPart.Features.CreatePointBuilder
 #if false
                     dynamic builder = workPart.Points.CreatePointBuilder(null);
                     builder.Method = "Intersection";
@@ -529,6 +564,8 @@ namespace NxMcpPlugin.Tools.Datum
 
                     NXOpen.Vector3d dirVec = GetDirectionVector(direction);
 
+                    // FIXME(NX2412): PointCollection.CreatePointBuilder only exists on Diagramming, not geometry.
+                    // NX2412 has no direct equivalent — reimplement using datum point builder or workPart.Features.CreatePointBuilder
 #if false
                     dynamic builder = workPart.Points.CreatePointBuilder(null);
                     builder.Method = "Projection";
@@ -547,6 +584,8 @@ namespace NxMcpPlugin.Tools.Datum
                     if (edgeObj == null)
                         return ToolResult.Fail(string.Format("Could not resolve reference1: '{0}'.", ref1)).ToJson();
 
+                    // FIXME(NX2412): PointCollection.CreatePointBuilder only exists on Diagramming, not geometry.
+                    // NX2412 has no direct equivalent — reimplement using datum point builder or workPart.Features.CreatePointBuilder
 #if false
                     dynamic builder = workPart.Points.CreatePointBuilder(null);
                     builder.Method = "MidPoint";
@@ -615,6 +654,7 @@ namespace NxMcpPlugin.Tools.Datum
 
         private static NXOpen.Vector3d GetDirectionVector(string direction)
         {
+            // NX2412: Vector3d is a struct — must use 'new' keyword for all constructors
             string key = direction.Trim().ToUpperInvariant();
             switch (key)
             {
