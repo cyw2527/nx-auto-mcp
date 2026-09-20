@@ -12,7 +12,7 @@
 Turn Siemens NX into something an AI agent can drive directly. This project exposes NX modeling, sketching, assembly and measurement capabilities as MCP (Model Context Protocol) tools, callable from Claude Code or any MCP client.
 
 ```
-Claude Code  ──stdio(MCP)──▶  mcp/nx-exec-mcp.js  ──TCP:1977──▶  managed_plugin.dll  ──NXOpen──▶  NX
+Claude Code  ──stdio(MCP)──▶  mcp/nx-auto-mcp.js  ──TCP:1977──▶  managed_plugin.dll  ──NXOpen──▶  NX
               ◀────────────                        ◀───────────                     ◀────────
 ```
 
@@ -37,7 +37,7 @@ nx-auto-mcp/
 ├── setup.bat              ← generates custom_dirs.dat + sets NX environment variables
 ├── LICENSE                ← MIT
 ├── mcp/                   ← MCP adapter layer (pure Node, no npm install needed)
-│   ├── nx-exec-mcp.js           MCP stdio entry point
+│   ├── nx-auto-mcp.js           MCP stdio entry point
 │   ├── mcp-compatible-stdio.js  transport (dual framing + stdout sentinel)
 │   └── tool-schemas.json        tool parameter contract snapshot
 ├── plugin/                ← NX plug-in layer (C#, build it yourself)
@@ -159,17 +159,17 @@ Environment variables are read only at NX startup. **Fully exit every NX window*
 ```json
 {
   "mcpServers": {
-    "nx-exec": {
+    "nx-auto-mcp": {
       "type": "stdio",
       "command": "node",
-      "args": ["C:/path/to/nx-auto-mcp/mcp/nx-exec-mcp.js"]
+      "args": ["C:/path/to/nx-auto-mcp/mcp/nx-auto-mcp.js"]
     }
   }
 }
 ```
 
-> **Confirm the client actually read that file**: type `/mcp` in a session (it lists `nx-exec`
-> and its connection state), or run `claude mcp list`; `claude mcp get nx-exec` also tells you
+> **Confirm the client actually read that file**: type `/mcp` in a session (it lists `nx-auto-mcp`
+> and its connection state), or run `claude mcp list`; `claude mcp get nx-auto-mcp` also tells you
 > which **scope** defines the server, which is how you check that the file you edited is the one
 > being read. `.mcp.json` is read **once, at session start** — restart the session after editing.
 >
@@ -178,7 +178,7 @@ Environment variables are read only at NX startup. **Fully exit every NX window*
 > and retry.
 
 > ⚠️ **Order matters: NX first, MCP client second.** The adapter fetches the tool list **once, at
-> process start** (`let pendingTools = loadTools();` in `mcp/nx-exec-mcp.js` is module-level) and
+> process start** (`let pendingTools = loadTools();` in `mcp/nx-auto-mcp.js` is module-level) and
 > never refreshes it. If the MCP client starts before NX is up (or before the plug-in has loaded),
 > it caches an **empty** list — you see no `nx_*` tools at all, and it never recovers on its own.
 >
@@ -334,7 +334,7 @@ Shared files: `tools/IToolHandler.cs` (interface), `tools/ToolResult.cs` (respon
 
 The parameter contract lives in `mcp/tool-schemas.json`. It **only supplies parameter metadata to the MCP side — it is not a gate**: a tool that is in the plug-in's `list_tools` but missing from this JSON **is still exposed** to clients, just with a permissive `{type:"object", additionalProperties:true}` `inputSchema` (the plug-in's contract still governs the parameters). So adding a tool **only requires changing the plug-in**; this JSON is optional enrichment, not a second place you must keep in sync.
 
-> ⚠️ **Tool names must start with `nx_`.** That is a hard requirement of the MCP adapter (`mcp/nx-exec-mcp.js` answers `Tool not found` for any name that does not). `nx-tcp-call.js --list`, on the other hand, talks to the **plug-in directly** and has no such rule — it will happily list an unprefixed tool, so **seeing it in the list does not mean MCP can call it**. With a missing prefix, `--list`'s "it's there" is a false positive; do not follow it into the connection-snapshot explanation.
+> ⚠️ **Tool names must start with `nx_`.** That is a hard requirement of the MCP adapter (`mcp/nx-auto-mcp.js` answers `Tool not found` for any name that does not). `nx-tcp-call.js --list`, on the other hand, talks to the **plug-in directly** and has no such rule — it will happily list an unprefixed tool, so **seeing it in the list does not mean MCP can call it**. With a missing prefix, `--list`'s "it's there" is a false positive; do not follow it into the connection-snapshot explanation.
 
 ### Rule hints (`data.rule_check`)
 
