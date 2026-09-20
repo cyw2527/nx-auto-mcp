@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>nx-auto-mcp — Siemens NX MCP Server for AI-Driven CAD Automation</title>
+    <meta name="description" content="Siemens NX MCP Server that lets AI assistants drive Siemens NX directly via Model Context Protocol. 130+ CAD tools, 10-50ms latency. Works with Claude Code, Cursor, and any MCP client.">
+    <meta name="keywords" content="Siemens NX MCP, NX MCP Server, NXOpen, CAD automation, AI agent, Model Context Protocol, 西门子 NX 自动化, nx-auto-mcp, CAD AI, MCP tools">
+    <meta name="author" content="cyw2527">
+    <meta name="robots" content="index, follow">
+    <meta name="googlebot" content="index, follow">
+    <meta name="bingbot" content="index, follow">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://cyw2527.github.io/nx-auto-mcp/">
+    <meta property="og:title" content="nx-auto-mcp — Siemens NX MCP Server">
+    <meta property="og:description" content="Siemens NX MCP Server for AI-driven CAD automation. 130+ tools, 10-50ms latency. Lets Claude Code, Cursor, and any MCP client directly operate Siemens NX.">
+    <meta property="og:image" content="https://opengraph.githubassets.com/1/cyw2527/nx-auto-mcp">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://cyw2527.github.io/nx-auto-mcp/">
+    <meta property="twitter:title" content="nx-auto-mcp — Siemens NX MCP Server">
+    <meta property="twitter:description" content="Siemens NX MCP Server for AI-driven CAD automation. 130+ tools, 10-50ms latency.">
+    <meta property="twitter:image" content="https://opengraph.githubassets.com/1/cyw2527/nx-auto-mcp">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://cyw2527.github.io/nx-auto-mcp/">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; line-height: 1.6; color: #24292e; max-width: 900px; margin: 0 auto; padding: 2rem; }
+        h1 { font-size: 2.5rem; margin-bottom: 1rem; border-bottom: 2px solid #e1e4e8; padding-bottom: 0.5rem; }
+        h2 { font-size: 1.8rem; margin: 2rem 0 1rem; color: #0366d6; }
+        h3 { font-size: 1.4rem; margin: 1.5rem 0 0.75rem; }
+        p { margin: 1rem 0; }
+        a { color: #0366d6; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        code { background: #f6f8fa; padding: 0.2em 0.4em; border-radius: 3px; font-size: 85%; }
+        pre { background: #f6f8fa; padding: 1rem; border-radius: 6px; overflow-x: auto; margin: 1rem 0; }
+        pre code { background: transparent; padding: 0; }
+        ul, ol { margin: 1rem 0; padding-left: 2rem; }
+        li { margin: 0.5rem 0; }
+        blockquote { border-left: 4px solid #0366d6; padding: 0.5rem 1rem; margin: 1rem 0; background: #f6f8fa; }
+        .badge { display: inline-block; padding: 0.25rem 0.5rem; background: #0366d6; color: white; border-radius: 4px; font-size: 0.875rem; margin-right: 0.5rem; }
+        .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin: 1rem 0; }
+        .feature { background: #f6f8fa; padding: 1rem; border-radius: 6px; }
+        .feature h4 { color: #0366d6; margin-bottom: 0.5rem; }
+        .cta { display: inline-block; background: #0366d6; color: white; padding: 0.75rem 1.5rem; border-radius: 6px; margin: 1rem 0; font-weight: 600; }
+        .cta:hover { background: #0250a3; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <h1>nx-auto-mcp</h1>
+    <p><strong>Siemens NX MCP Server for AI-Driven CAD Automation</strong></p>
+    
+    <blockquote>
+        <p><strong>nx-auto-mcp</strong> lets AI assistants drive Siemens NX directly via the <a href="https://modelcontextprotocol.io">Model Context Protocol</a>. It exposes 130+ CAD tools (modeling, sketching, assembly, measurement, inspection, sheet metal, and more) as MCP tools, callable from Claude Code, Cursor, or any MCP client.</p>
+        <ul>
+            <li><strong>GitHub</strong>: <a href="https://github.com/cyw2527/nx-auto-mcp">https://github.com/cyw2527/nx-auto-mcp</a></li>
+            <li><strong>Keywords</strong>: Siemens NX MCP, NX MCP Server, NXOpen, CAD automation, AI agent, Model Context Protocol</li>
+            <li><strong>Architecture</strong>: MCP stdio adapter (Node.js) → TCP 1977 → NX plugin (C# / NXOpen)</li>
+            <li><strong>Latency</strong>: 10–50 ms per tool call (resident process, no journal startup overhead)</li>
+        </ul>
+    </blockquote>
+
+    <h2>Why nx-auto-mcp?</h2>
+    <div class="features">
+        <div class="feature">
+            <h4>🏎️ Low Latency</h4>
+            <p>10–50 ms per tool call. TCP resident process stays alive — no journal startup overhead.</p>
+        </div>
+        <div class="feature">
+            <h4>🔧 130+ Tools</h4>
+            <p>Modeling, sketching, assembly, measurement, inspection, sheet metal, and more — all exposed as MCP tools.</p>
+        </div>
+        <div class="feature">
+            <h4>🤖 AI-Native</h4>
+            <p>Built for Claude Code, Cursor, and any MCP client. First-class support for AI-driven CAD workflows.</p>
+        </div>
+        <div class="feature">
+            <h4>📐 Engineering Rules</h4>
+            <p>15 built-in validation rules (hole clearance, wall thickness, spacing, etc.) for safe, production-ready designs.</p>
+        </div>
+    </div>
+
+    <h2>Quick Start</h2>
+    <pre><code># Clone the repository
+git clone https://github.com/cyw2527/nx-auto-mcp.git
+cd nx-auto-mcp
+
+# Build and deploy (requires NX installed)
+cd plugin
+.\build.bat run
+
+# Run setup
+.\setup.bat
+
+# Add to your MCP config (.mcp.json)
+{
+  "mcpServers": {
+    "nx": {
+      "command": "node",
+      "args": ["path/to/nx-auto-mcp/mcp/nx-exec-mcp.js"]
+    }
+  }
+}</code></pre>
+
+    <h2>Tool Coverage</h2>
+    <ul>
+        <li><strong>Modeling / solids</strong>: 24 tools (extrude, revolve, sweep, blend, chamfer, hole, pattern, boolean, shell, draft, loft, etc.)</li>
+        <li><strong>Sketching</strong>: 18 tools (create/edit sketches, constraints, dimensions, readback)</li>
+        <li><strong>Assembly</strong>: 14 tools (add component, create component, find same bodies, component tree, fix/unfix)</li>
+        <li><strong>File operations</strong>: 8 tools (open, close, save, create part, import/export)</li>
+        <li><strong>Inspection / topology</strong>: 7 tools (face analysis, edge analysis, feature tree, XT export)</li>
+        <li><strong>Measurement</strong>: 7 tools (distance, angle, volume, mass properties, area, perimeter)</li>
+        <li><strong>Synchronous modeling</strong>: 6 tools (move, offset, resize, replace face)</li>
+        <li><strong>Surfaces</strong>: 5 tools (extrude surface, revolve surface, sweep surface, bridge)</li>
+        <li><strong>Utilities</strong>: 12 tools (undo, screenshot, journal execution, view control, probe builder)</li>
+        <li><strong>Display</strong>: 4 tools (show/hide, layer control, view orientation)</li>
+        <li><strong>Datum</strong>: 4 tools (datum plane, datum axis, datum CSYS)</li>
+        <li><strong>Correction</strong>: 4 tools (face correction, edge correction)</li>
+        <li><strong>Sheet metal</strong>: 3 tools (flange, bend, punch)</li>
+        <li><strong>Curves</strong>: 3 tools (line, arc, spline)</li>
+        <li><strong>WAVE / associative</strong>: 2 tools (wave link, associative copy)</li>
+        <li><strong>Validation</strong>: 2 tools (check geometry, interference check)</li>
+    </ul>
+
+    <h2>Requirements</h2>
+    <ul>
+        <li>Siemens NX installed (developed on NX 2412)</li>
+        <li>Node.js &gt;= 18</li>
+        <li>.NET Framework 4.8 (Windows)</li>
+    </ul>
+
+    <h2>Links</h2>
+    <ul>
+        <li><a href="https://github.com/cyw2527/nx-auto-mcp">GitHub Repository</a></li>
+        <li><a href="https://github.com/cyw2527/nx-auto-mcp/blob/main/README.md">Documentation (English)</a></li>
+        <li><a href="https://github.com/cyw2527/nx-auto-mcp/blob/main/README.zh.md">文档 (中文)</a></li>
+        <li><a href="https://raw.githubusercontent.com/cyw2527/nx-auto-mcp/main/llms.txt">llms.txt</a></li>
+        <li><a href="https://modelcontextprotocol.io">Model Context Protocol</a></li>
+    </ul>
+
+    <h2>License</h2>
+    <p>This project is licensed under the MIT License.</p>
+
+    <p><a href="https://github.com/cyw2527/nx-auto-mcp" class="cta">View on GitHub →</a></p>
+</body>
+</html>
