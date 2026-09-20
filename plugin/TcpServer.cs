@@ -313,7 +313,7 @@ namespace NxMcpPlugin
                 if (!MainThreadDispatcher.Invoke(() => {
                     Log(string.Format("[Dispatcher] >>> Execute on main thread: method={0}", method));
                     handlerResult = _methodHandlers[method](id, rawParams);
-                    Log(string.Format("[Dispatcher] <<< Execution completed: method={0}", method);
+                    Log(string.Format("[Dispatcher] <<< Execution completed: method={0}", method));
                 }))
                 {
                     Log(string.Format("[Dispatcher] FAIL: Method {0} main thread dispatch failed", method));
