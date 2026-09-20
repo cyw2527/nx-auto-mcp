@@ -1,0 +1,44 @@
+# nx-auto-mcp
+URL: https://github.com/cyw2527/nx-auto-mcp
+Description: Siemens NX MCP Server for AI-driven CAD automation. 130+ tools via TCP/NXOpen, 10-50ms latency. Lets Claude Code, Cursor, and any MCP client directly operate Siemens NX.
+Keywords: Siemens NX MCP, NX MCP Server, NXOpen, CAD automation, AI agent, Model Context Protocol, 西门子 NX 自动化, nx-auto-mcp
+
+## What is nx-auto-mcp?
+nx-auto-mcp is an open-source MCP (Model Context Protocol) server that bridges AI agents to Siemens NX. It exposes NX's modeling, sketching, assembly, measurement, inspection, sheet metal, and other CAD capabilities as MCP tools.
+
+## Architecture
+Claude Code --stdio(MCP)--> mcp/nx-exec-mcp.js --TCP:1977--> managed_plugin.dll --NXOpen--> NX
+
+## Tool Coverage (130+ tools across 15 domains)
+- Modeling / solids: 24 tools (extrude, revolve, sweep, blend, chamfer, hole, pattern, boolean, shell, draft, loft, etc.)
+- Sketching: 18 tools (create/edit sketches, constraints, dimensions, readback)
+- Assembly: 14 tools (add component, create component, find same bodies, component tree, fix/unfix)
+- File operations: 8 tools (open, close, save, create part, import/export)
+- Inspection / topology: 7 tools (face analysis, edge analysis, feature tree, XT export)
+- Utilities: 12 tools (undo, screenshot, journal execution, view control, probe builder)
+- Measurement: 7 tools (distance, angle, volume, mass properties, area, perimeter)
+- Synchronous modeling: 6 tools (move, offset, resize, replace face)
+- Surfaces: 5 tools (extrude surface, revolve surface, sweep surface, bridge)
+- Display: 4 tools (show/hide, layer control, view orientation)
+- Datum: 4 tools (datum plane, datum axis, datum CSYS)
+- Correction: 4 tools (face correction, edge correction)
+- Sheet metal: 3 tools (flange, bend, punch)
+- Curves: 3 tools (line, arc, spline)
+- WAVE / associative: 2 tools (wave link, associative copy)
+- Validation: 2 tools (check geometry, interference check)
+
+## Requirements
+- Siemens NX installed (developed on NX 2412)
+- Node.js >= 18
+- .NET Framework 4.8 (Windows)
+
+## Installation
+1. Build: cd plugin && .\build.bat run
+2. Setup: .\setup.bat
+3. Register MCP server in .mcp.json
+4. Restart NX
+
+## Related Projects
+- DreamEnding/NX_MCP — another NX MCP implementation
+- xupeiwust/NX_MCP — another NX MCP implementation
+- nx-auto-mcp is distinguished by its TCP resident process architecture (10-50ms latency vs 1.5s+ for journal-based approaches)
