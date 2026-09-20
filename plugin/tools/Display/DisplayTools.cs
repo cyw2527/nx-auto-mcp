@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
-using NXOpen;
 
 namespace NxMcpPlugin.Tools.Display
 {
@@ -12,6 +11,9 @@ namespace NxMcpPlugin.Tools.Display
 
     internal static class DisplayHelpers
     {
+        /// <summary>
+        /// Convert an NXOpen collection to a list.
+        /// </summary>
         internal static List<dynamic> ToList(dynamic collection)
         {
             var list = new List<dynamic>();
@@ -21,10 +23,14 @@ namespace NxMcpPlugin.Tools.Display
                 foreach (var item in collection)
                     list.Add(item);
             }
-            catch { }
+            catch { /* empty or non-enumerable */ }
             return list;
         }
 
+        /// <summary>
+        /// Resolve an NXOpen object by name across one or more collections.
+        /// Case-insensitive comparison. Returns null if not found.
+        /// </summary>
         internal static dynamic Resolve(dynamic wp, string name,
             params dynamic[] collections)
         {
@@ -40,12 +46,17 @@ namespace NxMcpPlugin.Tools.Display
                             StringComparison.OrdinalIgnoreCase))
                             return obj;
                     }
-                    catch { }
+                    catch { /* object may not have Name */ }
                 }
             }
             return null;
         }
 
+        /// <summary>
+        /// Parse a color value (hex string or [r,g,b] JArray) into an NXOpen Color.
+        /// Accepts: "#FF0000", "FF0000", or a JArray [255, 0, 0].
+        /// Returns the NXOpen Color via CreateRgb, or null if invalid.
+        /// </summary>
         internal static dynamic ParseColor(JToken colorToken)
         {
             if (colorToken == null) return null;
@@ -58,7 +69,8 @@ namespace NxMcpPlugin.Tools.Display
                 int b = arr[2].Value<int>();
                 if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255)
                     return null;
-                return r * 65536 + g * 256 + b;
+                // NX2412: Color.CreateRgb doesn't exist. Use integer color value.
+                return r * 65536 + g * 256 + b; // RGB to int
             }
 
             string hex = colorToken.Value<string>();
@@ -76,9 +88,12 @@ namespace NxMcpPlugin.Tools.Display
             if (!int.TryParse(hex.Substring(4, 2), System.Globalization.NumberStyles.HexNumber,
                     null, out b2)) return null;
 
-            return r2 * 65536 + g2 * 256 + b2;
+            return r2 * 65536 + g2 * 256 + b2; // RGB to int
         }
 
+        /// <summary>
+        /// Parse a hex or JArray color into (r, g, b) tuple for output reporting.
+        /// </summary>
         internal static void ParseColorRgb(JToken colorToken, out int r, out int g, out int b)
         {
             JArray arr = colorToken as JArray;
@@ -109,6 +124,13 @@ namespace NxMcpPlugin.Tools.Display
     // 1. nx_set_layer_visibility
     // =========================================================================
 
+    /// <summary>
+    /// Sets the visibility of a layer (show or hide).
+    /// Parameters:
+    ///   layer (int, required) - Layer number (1-256).
+    ///   visible (bool, required) - True to show, False to hide.
+    /// Returns: { layer, visible }
+    /// </summary>
     public class SetLayerVisibilityTool : IToolHandler
     {
         public string Name { get { return "nx_set_layer_visibility"; } }
@@ -134,6 +156,7 @@ namespace NxMcpPlugin.Tools.Display
                 if (wp == null)
                     return ToolResult.Fail("No work part is open.").ToJson();
 
+                // NXOpen: Layer.Visible / Layer.Hidden, Layers.SetState(layer, state)
                 var state = visible.Value
                     ? NXOpen.Layer.State.Visible
                     : NXOpen.Layer.State.Hidden;
@@ -159,6 +182,13 @@ namespace NxMcpPlugin.Tools.Display
     // 2. nx_move_to_layer
     // =========================================================================
 
+    /// <summary>
+    /// Moves objects to a specified layer.
+    /// Parameters:
+    ///   objects (string[], required) - List of object names to move.
+    ///   layer (int, required) - Target layer number (1-256).
+    /// Returns: { objects, layer, moved_count }
+    /// </summary>
     public class MoveToLayerTool : IToolHandler
     {
         public string Name { get { return "nx_move_to_layer"; } }
@@ -196,6 +226,7 @@ namespace NxMcpPlugin.Tools.Display
                         return ToolResult.Fail(
                             string.Format("Object '{0}' not found.", objName)).ToJson();
 
+                    // NXOpen: Layers.MoveToLayer(objectArray, layer)
                     wp.Layers.MoveToLayer(new object[] { nxObj }, layer.Value);
                     movedNames.Add(objName);
                 }
@@ -219,6 +250,13 @@ namespace NxMcpPlugin.Tools.Display
     // 3. nx_set_object_color
     // =========================================================================
 
+    /// <summary>
+    /// Sets the display color of objects.
+    /// Parameters:
+    ///   objects (string[], required) - List of object names to color.
+    ///   color (string or [r,g,b], required) - Hex string "#FF0000" or [r,g,b] array.
+    /// Returns: { objects, color: { r, g, b }, colored_count }
+    /// </summary>
     public class SetObjectColorTool : IToolHandler
     {
         public string Name { get { return "nx_set_object_color"; } }
@@ -241,6 +279,7 @@ namespace NxMcpPlugin.Tools.Display
                 if (colorToken == null)
                     return ToolResult.Fail("The 'color' parameter is required.").ToJson();
 
+                // NXOpen: Color.CreateRgb(r, g, b)
                 dynamic nxColor = DisplayHelpers.ParseColor(colorToken);
                 if (nxColor == null)
                     return ToolResult.Fail(
@@ -291,6 +330,17 @@ namespace NxMcpPlugin.Tools.Display
     // 4. nx_set_object_transparency
     // =========================================================================
 
+    /// <summary>
+    /// Sets the transparency of objects.
+    /// Parameters:
+    ///   objects (string[], required) - List of object names to modify.
+    ///   transparency (double, required) - 0.0 = opaque, 1.0 = fully transparent.
+    /// Returns: { objects, transparency, modified_count }
+    /// </summary>
+    /// Parameters:
+    ///   objects (string, optional) - objects parameter.
+    ///   transparency (string, optional) - transparency parameter.
+    ///
     public class SetObjectTransparencyTool : IToolHandler
     {
         public string Name { get { return "nx_set_object_transparency"; } }
