@@ -1,0 +1,2336 @@
+{
+  "nx_add_component": {
+    "properties": {
+      "part_path": {
+        "type": "string",
+        "description": "Absolute path to the .prt file to add as a component"
+      },
+      "name": {
+        "type": "string",
+        "description": "Instance name for the new component (e.g. \"BRACKET_1\")"
+      },
+      "position": {
+        "type": "array",
+        "description": "Transformation matrix [4x4] or [x,y,z] position for the component"
+      }
+    },
+    "required": [],
+    "description": "Add a component from a .prt file to the current assembly. Maps to ComponentAssembly.AddComponent(partPath, name)."
+  },
+  "nx_mate_component": {
+    "properties": {
+      "component": {
+        "type": "string",
+        "description": "Component name to be constrained (moved), e.g. STAND"
+      },
+      "mate_type": {
+        "type": "string",
+        "description": "Touch|Concentric|Fix|Distance|Parallel|Perpendicular|AlignLock|Angle|Center12|Bond|Fit (11 types; AlignLock/Angle use geometry axis with usesAxis=true; Bond uses component-level reference with no geometry; Center12 requires to2_component/to2_geom)"
+      },
+      "alignment": {
+        "type": "string",
+        "description": "InferAlign (default)|CoAlign|ContraAlign"
+      },
+      "to_component": {
+        "type": "string",
+        "description": "Reference component name (not needed for Fix type)"
+      },
+      "to_geom": {
+        "type": "string",
+        "description": "Reference geometry journal id (face format: FACE 120 {(0,0,0) EXTRUDE(1)}; Features|... composite strings are not resolvable)"
+      },
+      "from_geom": {
+        "type": "string",
+        "description": "Moving component geometry journal id"
+      },
+      "offset": {
+        "type": "number",
+        "description": "Distance constraint value (mm) / Angle value (°); 0=unset"
+      },
+      "to2_component": {
+        "type": "string",
+        "description": "Center12 second reference component name (required, Center12 only)"
+      },
+      "to2_geom": {
+        "type": "string",
+        "description": "Center12 second reference geometry journal id (required, Center12 only; format same as to_geom)"
+      }
+    },
+    "required": [
+      "component",
+      "mate_type"
+    ],
+    "description": "Apply an assembly constraint (11 types: Touch/Concentric/Fix/Distance/Parallel/Perpendicular/AlignLock/Angle/Center12/Bond/Fit) between components (Positioner direct mode. ClearNetwork→Begin→Establish→CreateConstraint(true)→type/alignment→refs→FixHint→Solve→ClearNetwork→End)"
+  },
+  "nx_list_components": {
+    "properties": {},
+    "required": [],
+    "description": "List all components in the current assembly. Iterates over the root component's children and reports their names.",
+    "_noParams": true
+  },
+  "nx_reposition_component": {
+    "properties": {
+      "component": {
+        "type": "string",
+        "description": "Name of the component to reposition"
+      },
+      "dx": {
+        "type": "number",
+        "description": "X-axis translation delta (mm)"
+      },
+      "dy": {
+        "type": "number",
+        "description": "Y-axis translation delta (mm)"
+      },
+      "dz": {
+        "type": "number",
+        "description": "Z-axis translation delta (mm)"
+      },
+      "rx": {
+        "type": "number",
+        "description": "X-axis rotation delta (degrees)"
+      },
+      "ry": {
+        "type": "number",
+        "description": "Y-axis rotation delta (degrees)"
+      },
+      "rz": {
+        "type": "number",
+        "description": "Z-axis rotation delta (degrees)"
+      }
+    },
+    "required": [],
+    "description": "Move a component by translation and rotation offsets. Computes a rotation matrix from Euler angles (XYZ order, degrees) and applies it via ComponentAssembly.MoveComponent()."
+  },
+  "nx_remove_component": {
+    "properties": {
+      "component": {
+        "type": "string",
+        "description": "Name of the component instance to remove from the assembly"
+      }
+    },
+    "required": [],
+    "description": "Remove a component from the current assembly. Maps to ComponentAssembly.RemoveComponent(target)."
+  },
+  "nx_suppress_component": {
+    "properties": {
+      "component": {
+        "type": "string",
+        "description": "Name of the component to suppress"
+      },
+      "suppress": {
+        "type": "boolean",
+        "description": "true to suppress, false to unsuppress"
+      }
+    },
+    "required": [],
+    "description": "Suppress or unsuppress a component in the assembly. Maps to ComponentAssembly.SetComponentSuppression(target, suppress)."
+  },
+  "nx_component_pattern": {
+    "properties": {
+      "component": {
+        "type": "string",
+        "description": "Component name to pattern"
+      },
+      "pattern_type": {
+        "type": "string",
+        "description": "\"linear\"|\"circular\" pattern type"
+      },
+      "count": {
+        "type": "integer",
+        "description": "Number of instances (including original)"
+      },
+      "direction": {
+        "type": "string",
+        "description": "Direction vector [i,j,k] for linear pattern"
+      },
+      "axis": {
+        "type": "string",
+        "description": "Rotation axis for circular pattern (edge or vector)"
+      },
+      "angle_span": {
+        "type": "number",
+        "description": "Total angle span (degrees) for circular pattern"
+      },
+      "spacing": {
+        "type": "string",
+        "description": "Spacing between instances (mm) for linear pattern"
+      }
+    },
+    "required": [],
+    "description": "Create a component pattern (linear or circular) in the assembly. Linear: requires spacing, direction (X/Y/Z), and count. Circular: requires axis (X/Y/Z), direction, count, and optional angle_span. Uses ComponentAssembly.CreateComponentPatternBuilder()."
+  },
+  "nx_interference_check": {
+    "properties": {
+      "components": {
+        "type": "array",
+        "description": "Array of two component names to check for interference"
+      }
+    },
+    "required": [],
+    "description": "Check for interference/overlap between assembly components. Maps to ComponentAssembly.CheckInterference(compObjects). If the components array is empty, checks all components. Returns a list of interference pairs with overlap volume."
+  },
+  "nx_explode_assembly": {
+    "properties": {
+      "explode": {
+        "type": "boolean",
+        "description": "true=create/update explode, false=restore and delete all explodes (default true)"
+      },
+      "layout": {
+        "type": "string",
+        "description": "none (empty explode) | linear (per-component linear extrapolation, verified via UF ExplodeComponent) | nx_auto (NX automatic)"
+      },
+      "axis": {
+        "type": "string",
+        "description": "Linear layout axis X/Y/Z (default Z)"
+      },
+      "spacing": {
+        "type": "number",
+        "description": "Linear layout spacing mm (default = assembly bbox max dimension × 0.5 / component count, minimum 20)"
+      },
+      "scale": {
+        "type": "number",
+        "description": "Spacing multiplier (formerly a dead parameter, now fixed to actually take effect)"
+      },
+      "components": {
+        "type": "array",
+        "description": "Only lay out specified component names (default = full tree)"
+      }
+    },
+    "required": [],
+    "description": "Create or modify an explode view of the assembly. layout=none (empty explode) | linear (linear extrapolation per component, verified via UF ExplodeComponent) | nx_auto (NX automatic). Options: per-component offset, scale factor, selective components. Default: all components, linear along Z."
+  },
+  "nx_correct_face_geometry": {
+    "properties": {},
+    "required": [],
+    "description": "[未实现] 修正面的曲面类型（B_SURFACE → PLANE/CYLINDER 等）。NX2412 API 不可用，请在 NX GUI 中手动操作。",
+    "_noParams": true
+  },
+  "nx_rebuild_feature": {
+    "properties": {
+      "new_parameters": {
+        "type": "string",
+        "description": "Optional parameter overrides for the rebuild"
+      },
+      "feature_name": {
+        "type": "string",
+        "description": "Feature name or tag to rebuild"
+      }
+    },
+    "required": [],
+    "description": "Rebuild a feature with new parameters. Updates expression values on the existing feature. Preserves design intent by transferring unchanged parameters. NX2412: Features.DeleteFeature() and Features.Update() don't exist. Use expression update only - NX automatically updates the model."
+  },
+  "nx_rollback_to_mark": {
+    "properties": {
+      "mark_id": {
+        "type": "integer",
+        "description": "Undo mark ID to roll back to"
+      }
+    },
+    "required": [],
+    "description": "Rollback the model to a previous undo mark (pmark). Useful for 'undo-retry' correction strategies. NX2412: Session.GetUndoMarkCount() doesn't exist. Use Session.GetAllVisibleUndoMarks() and Session.UndoToMark() instead."
+  },
+  "nx_apply_suggestion": {
+    "properties": {
+      "parameters": {
+        "type": "string",
+        "description": "Additional parameters for the repair action"
+      },
+      "issue_type": {
+        "type": "string",
+        "description": "Type of issue being fixed"
+      },
+      "entity_id": {
+        "type": "integer",
+        "description": "Entity to apply the fix to"
+      },
+      "action": {
+        "type": "string",
+        "description": "Repair action to perform"
+      }
+    },
+    "required": [],
+    "description": "Apply a correction suggestion from nx_validate_model. Automatically fixes issues like short edges, tolerant edges, small faces. NX2412: Most auto-fixes require manual intervention (edge.GetFeature/DeleteFeature don't exist). Returns guidance for each issue type."
+  },
+  "nx_project_curve": {
+    "properties": {
+      "curve_tags": {
+        "type": "array",
+        "description": "Curve tags or indices to project"
+      },
+      "face_tags": {
+        "type": "array",
+        "description": "Target face tags for projection"
+      },
+      "direction": {
+        "type": "string",
+        "description": "Projection direction vector [i,j,k]"
+      }
+    },
+    "required": [],
+    "description": "Project Curve - project curves onto faces or planes. Runtime probe (2026-07-31): SectionToProject (Section) + FaceToProjectTo (SelectObjectList)"
+  },
+  "nx_offset_curve": {
+    "properties": {
+      "curve_tags": {
+        "type": "array",
+        "description": "Curve tags or indices to offset"
+      },
+      "distance": {
+        "type": "number",
+        "description": "Offset distance (mm)"
+      }
+    },
+    "required": [],
+    "description": "Offset Curve — offset curves by distance in a plane. Verified on NX2412. Supports inward/outward offset with optional trim/extend."
+  },
+  "nx_intersection_curve": {
+    "properties": {
+      "face_tags1": {
+        "type": "array",
+        "description": "First set of face tags"
+      },
+      "face_tags2": {
+        "type": "array",
+        "description": "Second set of face tags"
+      }
+    },
+    "required": [],
+    "description": "Intersection Curve - create curves at the intersection of two face sets. Runtime probe: FirstFace/SecondFace (ScCollector) - use AddFaceToCollector rules"
+  },
+  "nx_create_datum_plane": {
+    "properties": {
+      "method": {
+        "type": "string",
+        "description": "principal (default), offset, through_face."
+      },
+      "reference": {
+        "type": "string",
+        "description": "Reference entity (face, plane, or point) depending on type"
+      },
+      "offset_distance": {
+        "type": "number",
+        "description": "Offset distance for offset method."
+      },
+      "plane_name": {
+        "type": "string",
+        "description": "Datum plane name."
+      },
+      "principal_type": {
+        "type": "string",
+        "description": "XY, XZ, or YZ for principal method."
+      }
+    },
+    "required": [],
+    "description": "Create a datum plane in the work part. Supports methods: principal (XY/XZ/YZ), offset (from face/datum), through_face (coplanar to face/datum), and three_points (reserved)."
+  },
+  "nx_create_datum_axis": {
+    "properties": {
+      "method": {
+        "type": "string",
+        "description": "edge (default), cylindrical_face."
+      },
+      "reference": {
+        "type": "string",
+        "description": "Reference entity depending on type"
+      },
+      "axis_name": {
+        "type": "string",
+        "description": "Datum axis name."
+      }
+    },
+    "required": [],
+    "description": "Create a datum axis in the work part. Supports methods: edge (from existing edge), cylindrical_face (from cylindrical face), two_points (reserved), intersection (reserved)."
+  },
+  "nx_create_datum_csys": {
+    "properties": {
+      "origin_x": {
+        "type": "number",
+        "description": "CSYS origin X (default 0)."
+      },
+      "origin_y": {
+        "type": "number",
+        "description": "CSYS origin Y (default 0)."
+      },
+      "origin_z": {
+        "type": "number",
+        "description": "CSYS origin Z (default 0)."
+      },
+      "csys_name": {
+        "type": "string",
+        "description": "CSYS name."
+      },
+      "x_axis": {
+        "type": "array",
+        "description": "X direction vector [dx,dy,dz]."
+      },
+      "y_axis": {
+        "type": "array",
+        "description": "Y direction vector [dx,dy,dz]."
+      }
+    },
+    "required": [],
+    "description": "Create a datum coordinate system (CSYS) in the work part. Creates 3 datum planes (XY, XZ, YZ) and 3 datum axes (X, Y, Z) at the specified origin. Axes are computed from user-provided X and Y direction vectors, with Z as cross product."
+  },
+  "nx_create_point": {
+    "properties": {
+      "method": {
+        "type": "string",
+        "description": "coordinates (default), intersection, projection, midpoint."
+      },
+      "x": {
+        "type": "number",
+        "description": "X for coordinates method."
+      },
+      "y": {
+        "type": "number",
+        "description": "Y for coordinates method."
+      },
+      "z": {
+        "type": "number",
+        "description": "Z for coordinates method."
+      },
+      "reference1": {
+        "type": "string",
+        "description": "First curve/edge/point reference."
+      },
+      "reference2": {
+        "type": "string",
+        "description": "Second reference (intersection/projection)."
+      },
+      "direction": {
+        "type": "string",
+        "description": "Direction for projection method."
+      },
+      "point_name": {
+        "type": "string",
+        "description": "Point name."
+      }
+    },
+    "required": [],
+    "description": "Create a datum point in the work part. Supports methods: coordinates (from XYZ values), intersection (two curves/edges), projection (project a point/curve along a direction), and midpoint (midpoint of an edge/curve)."
+  },
+  "nx_set_layer_visibility": {
+    "properties": {
+      "layer": {
+        "type": "string",
+        "description": "Layer number (1-256)"
+      },
+      "visible": {
+        "type": "string",
+        "description": "true to make visible, false to hide"
+      }
+    },
+    "required": [
+      "layer",
+      "visible"
+    ],
+    "description": "Sets the visibility of a layer (show or hide)."
+  },
+  "nx_move_to_layer": {
+    "properties": {
+      "objects": {
+        "type": "string",
+        "description": "Selection or list of objects to move"
+      },
+      "layer": {
+        "type": "string",
+        "description": "Target layer number (1-256)"
+      }
+    },
+    "required": [
+      "objects",
+      "layer"
+    ],
+    "description": "Moves objects to a specified layer."
+  },
+  "nx_set_object_color": {
+    "properties": {
+      "objects": {
+        "type": "string",
+        "description": "List of object names to color."
+      },
+      "color": {
+        "type": "string",
+        "description": "Hex string \"#FF0000\" or [r,g,b] array."
+      }
+    },
+    "required": [
+      "objects",
+      "color"
+    ],
+    "description": "Sets the display color of objects."
+  },
+  "nx_set_object_transparency": {
+    "properties": {
+      "objects": {
+        "type": "string",
+        "description": "List of object names to modify."
+      },
+      "transparency": {
+        "type": "string",
+        "description": "0.0 = opaque, 1.0 = fully transparent."
+      }
+    },
+    "required": [
+      "objects",
+      "transparency"
+    ],
+    "description": "Sets the transparency of objects."
+  },
+  "nx_create_part": {
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Full path for the new part file (e.g., \"C:/temp/test.prt\")."
+      },
+      "units": {
+        "type": "string",
+        "description": "mm (default) or inches."
+      }
+    },
+    "required": [
+      "path"
+    ],
+    "description": "Create a new NX part file at the specified path. Maps to Session.Parts.FileNew() with blank template."
+  },
+  "nx_open_part": {
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Absolute path to the .prt file to open"
+      }
+    },
+    "required": [],
+    "description": "Open an existing NX part file. NX2412: OpenBaseDisplay(string) 1-param overload removed. Strategy: try OpenBaseDisplay(string, string[]) first, then Open(string)."
+  },
+  "nx_save_part": {
+    "properties": {},
+    "required": [],
+    "description": "Save the currently active (work) part. Maps to Part.Save(SaveComponents.True, CloseAfterSave.False).",
+    "_noParams": true
+  },
+  "nx_save_as": {
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Absolute path for the new .prt file"
+      }
+    },
+    "required": [],
+    "description": "Save the current work part to a new file path. Maps to Part.SaveAs(path)."
+  },
+  "nx_close_part": {
+    "properties": {},
+    "required": [],
+    "description": "Close the currently active (work) part. Contract (M-008): can only close the current work part; cannot close a specific named part. Unsaved changes are discarded without prompting.",
+    "_noParams": true
+  },
+  "nx_export_step": {
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Absolute path for the output .stp file"
+      },
+      "format": {
+        "type": "string",
+        "description": "Export format (default: STEP)"
+      }
+    },
+    "required": [],
+    "description": "Export the current work part to STEP, IGES, STL, or Parasolid format. Uses Session.DexManager.CreateStepCreator(), CreateIgesCreator(), CreateStlCreator(), or CreateParasolidTranslator() respectively."
+  },
+  "nx_import_geometry": {
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Absolute path to the file to import (.stp, .igs, .sat, etc.)"
+      }
+    },
+    "required": [],
+    "description": "Import geometry from STEP, IGES, or Parasolid files into the current work part. Uses Session.DexManager.CreateStepImporter(), CreateIgesImporter(), or CreateParasolidImporter() based on file extension."
+  },
+  "nx_list_open_parts": {
+    "properties": {},
+    "required": [],
+    "description": "List all currently open parts in the NX session. Iterates Session.Parts and reports name, path, and work-part status.",
+    "_noParams": true
+  },
+  "nx_inspect_topology": {
+    "properties": {
+      "body_id": {
+        "type": "string",
+        "description": "Body tag or index to inspect; empty = first solid body"
+      },
+      "detail_level": {
+        "type": "string",
+        "description": "\"summary\" (counts only) or \"full\" (per-face/edge lists)"
+      },
+      "include_convexity": {
+        "type": "boolean",
+        "description": "Include convexity info for each edge"
+      }
+    },
+    "required": [],
+    "description": "Inspect the B-rep topology of bodies in the work part. Returns body->face->edge hierarchy with surface types, face adjacency graph (Phase 0.1), and optional edge convexity (Phase 0.2) via UFEval. detail_level: 'summary' (counts only), 'full' (faces+edges+FAG), '1-ring' (faces only). include_convexity: true to compute CONVEX/CONCAVE/SMOOTH per edge."
+  },
+  "nx_evaluate_face": {
+    "properties": {
+      "face_id": {
+        "type": "integer",
+        "description": "Face tag or index to evaluate"
+      },
+      "mode": {
+        "type": "string",
+        "description": "Evaluation mode: \"uv_point\"|\"closest_point\"|\"ray\""
+      },
+      "u": {
+        "type": "number",
+        "description": "U parameter for UV evaluation"
+      },
+      "v": {
+        "type": "number",
+        "description": "V parameter for UV evaluation"
+      },
+      "px": {
+        "type": "number",
+        "description": "X coordinate of query point (for closest_point/ray mode)"
+      },
+      "py": {
+        "type": "number",
+        "description": "Y coordinate of query point"
+      },
+      "pz": {
+        "type": "number",
+        "description": "Z coordinate of query point"
+      }
+    },
+    "required": [],
+    "description": "Evaluate a face's normal vector at a given (u,v) parameter or at the closest point to a probe point. Uses UF.UFEval (Phase 0.2). Modes: 'parametric' — provide (u, v); 'closest_point' — provide (px, py, pz)."
+  },
+  "nx_inspect_geometry": {
+    "properties": {
+      "entity_type": {
+        "type": "string",
+        "description": "Entity type: \"body\"|\"face\"|\"edge\""
+      },
+      "entity_id": {
+        "type": "integer",
+        "description": "Entity tag or index"
+      },
+      "include_xt": {
+        "type": "boolean",
+        "description": "Include Parasolid XT node data"
+      }
+    },
+    "required": [],
+    "description": "Extract detailed geometric definition of a face, edge, or vertex. Returns surface/curve parameters, control points, normals, tolerances. Set include_xt=true to include Parasolid XT node reference for deep inspection."
+  },
+  "nx_inspect_feature_tree": {
+    "properties": {
+      "feature_name": {
+        "type": "string",
+        "description": "Filter to one feature (default: all)."
+      }
+    },
+    "required": [],
+    "description": "Inspect the feature tree with design intent extraction. Returns feature parameters, output faces, parent sketches, and status. Extends nx_list_features + nx_get_feature_info with structured intent data.",
+    "returns": [
+      {
+        "name": "features",
+        "type": "array",
+        "desc": "[{ journal_id, type, timestamp, status, ... }]"
+      },
+      {
+        "name": "count",
+        "type": "number",
+        "desc": "Number of features."
+      }
+    ]
+  },
+  "nx_export_xt": {
+    "properties": {
+      "format": {
+        "type": "string",
+        "description": "Parasolid version (e.g. \"33.0\")"
+      },
+      "filename": {
+        "type": "string",
+        "description": "Absolute path for the output .xt file"
+      }
+    },
+    "required": [],
+    "description": "Export the current work part as a Parasolid XT file. Returns the file path, schema version, and node count. NX2412: Part.ExportParasolid doesn't exist. Use Session.DexManager.CreateParasolidExporter."
+  },
+  "nx_inspect_xt_node": {
+    "properties": {
+      "xt_path": {
+        "type": "string",
+        "description": "Path to the .xt file to inspect"
+      },
+      "node_index": {
+        "type": "integer",
+        "description": "Specific node index within the XT tree"
+      }
+    },
+    "required": [],
+    "description": "Query a single node from a Parasolid XT file by 1-based index. Returns the node type, node_id, name, and all parsed fields. Supports V35 schema with node-id to index cross-referencing. Use after nx_export_xt to do deep geometry inspection."
+  },
+  "nx_inspect_selection": {
+    "properties": {},
+    "required": [],
+    "description": "Inspect currently selected objects in NX (faces/edges/bodies/components/drafting objects). Uses UI.SelectionManager to read the live selection, then describes each object: Face  → SolidFaceType + AskFaceData (pt/dir/radius/bbox) + area Edge  → SolidEdgeType + length Body  → face/edge counts Component → name/part/transform DraftingView/DraftingCurve → type info Feature → feature type",
+    "_noParams": true
+  },
+  "nx_measure_distance": {
+    "properties": {
+      "obj1": {
+        "type": "string",
+        "description": "Name of the first object."
+      },
+      "obj2": {
+        "type": "string",
+        "description": "Name of the second object."
+      }
+    },
+    "required": [
+      "obj1",
+      "obj2"
+    ],
+    "description": "Measures the minimum distance between two named objects in the work part."
+  },
+  "nx_measure_angle": {
+    "properties": {
+      "obj1": {
+        "type": "string",
+        "description": "Name of the first object."
+      },
+      "obj2": {
+        "type": "string",
+        "description": "Name of the second object."
+      }
+    },
+    "required": [
+      "obj1",
+      "obj2"
+    ],
+    "description": "Measures the angle between two named objects in the work part."
+  },
+  "nx_measure_volume": {
+    "properties": {
+      "body": {
+        "type": "string",
+        "description": "Target body name. Default: all bodies."
+      }
+    },
+    "required": [],
+    "description": "Measures the volume of a body (or all bodies) in the work part."
+  },
+  "nx_measure_mass_properties": {
+    "properties": {
+      "body": {
+        "type": "string",
+        "description": "Target body name. Default: all bodies."
+      }
+    },
+    "required": [],
+    "description": "Calculates mass, center of mass, and moments of inertia for a body."
+  },
+  "nx_measure_perimeter": {
+    "properties": {
+      "curves": {
+        "type": "string",
+        "description": "List of curve or edge names to measure."
+      }
+    },
+    "required": [
+      "curves"
+    ],
+    "description": "Measures the total perimeter/length of curves or edges."
+  },
+  "nx_measure_area": {
+    "properties": {
+      "faces": {
+        "type": "array",
+        "description": "List of face names to measure."
+      }
+    },
+    "required": [
+      "faces"
+    ],
+    "description": "Measures the area of faces."
+  },
+  "nx_section_analysis": {
+    "properties": {},
+    "required": [],
+    "description": "Performs section analysis on a body at a specified plane.",
+    "_noParams": true
+  },
+  "nx_extrude": {
+    "properties": {
+      "sketch_name": {
+        "type": "string",
+        "description": "Name of the sketch to extrude (falls back to most recent)"
+      },
+      "distance": {
+        "type": "number",
+        "description": "END limit value (Limits.EndExtend, absolute from section plane; NOT extrude length). Default 10."
+      },
+      "direction": {
+        "type": "string",
+        "description": "X, Y, Z, -X, -Y, -Z (default Z)"
+      },
+      "boolean": {
+        "type": "string",
+        "description": "none, unite, subtract, intersect"
+      },
+      "start_distance": {
+        "type": "number",
+        "description": "START limit value (Limits.StartExtend, absolute from section plane). Default 0."
+      },
+      "end_condition": {
+        "type": "string",
+        "description": "Warning: currently NOT applied (echo only, not applied to builder). Only supports Limits value semantics."
+      },
+      "target": {
+        "type": "string",
+        "description": "Boolean target body: body name / journal_id / tag. Must be explicitly specified when multiple bodies exist, otherwise error."
+      },
+      "seed_point": {
+        "type": "string",
+        "description": "Region selection (verified in 96.6% of human-authored journals): \"x,y,z\" seed point to isolate one region from the curve soup. Uses ScRuleFactory.CreateRuleFaceFeatures with FaceHoleSeedPoint."
+      },
+      "seed_points": {
+        "type": "string",
+        "description": "Multi-region union — semicolon-separated seeds \"x,y;z;x,y,z\". Each seed creates a separate region rule, added sequentially with Boolean.Add."
+      },
+      "curve_indices": {
+        "type": "string",
+        "description": "Constrain region boundary to a 1-based curve subset of the sketch, e.g. \"1,3,5\" (by sketch GetAllGeometry order). Human region arrays are often the true boundary of the .prt curves."
+      },
+      "curve_names": {
+        "type": "string",
+        "description": "Same as above but select by curve name (takes priority over curve_indices). Names are more stable than indices: .prt preserves NX auto-names (Arc1, Line2...)."
+      }
+    },
+    "required": [
+      "distance"
+    ],
+    "description": "Extrude a section or sketch by a given distance. seed_point/seed_points provide region selection (verified). curve_indices/curve_names constrain region boundary to a subset of sketch curves.",
+    "returns": [
+      {
+        "name": "feature",
+        "type": "string",
+        "desc": "JournalIdentifier like \"EXTRUDE(2)\" (NX2412 Name is empty; use as reference)"
+      },
+      {
+        "name": "body",
+        "type": "string",
+        "desc": "JournalIdentifier of the created body (empty if boolean=subtract removed it)"
+      },
+      {
+        "name": "journal_id",
+        "type": "string",
+        "desc": "alias of feature"
+      }
+    ]
+  },
+  "nx_revolve": {
+    "properties": {
+      "sketch_name": {
+        "type": "string",
+        "description": "Name of the sketch to revolve (falls back to most recent)."
+      },
+      "angle": {
+        "type": "number",
+        "description": "Revolution angle in degrees (default 360)"
+      },
+      "axis": {
+        "type": "string",
+        "description": "Axis of revolution: X, Y, Z (UPPERCASE only; default Z). Verified across all committed revolve cases."
+      },
+      "boolean": {
+        "type": "string",
+        "description": "none, unite, subtract, intersect"
+      },
+      "target": {
+        "type": "string",
+        "description": "Boolean target body: body name / journal_id / tag. Must be explicitly specified when multiple bodies exist."
+      },
+      "seed_point": {
+        "type": "string",
+        "description": "Region selection: \"x,y,z\" seed point to isolate one region from the curve soup, then revolve it. Verified: 35 committed Revolve cases use this approach."
+      },
+      "seed_points": {
+        "type": "string",
+        "description": "Multi-region union, semicolon-separated \"x,y;z;x,y,z\". Same as nx_extrude."
+      },
+      "curve_indices": {
+        "type": "string",
+        "description": "Constrain region boundary to a 1-based curve subset of the sketch (e.g. to exclude isolated lines). Human region arrays are often the true boundary of .prt curves."
+      },
+      "curve_names": {
+        "type": "string",
+        "description": "Same as above, select by curve name (takes priority over curve_indices). Verified: ASSEMBLY_14_PART_4 uses curve_names successfully."
+      }
+    },
+    "required": [],
+    "description": "Revolve a section or sketch around an axis. seed_point/seed_points provide region selection (verified). curve_indices/curve_names constrain region boundary.",
+    "returns": [
+      {
+        "name": "journal_id",
+        "type": "string",
+        "desc": "特征句柄 \"REVOLVE(2)\" (NX2412 Name 为空, 用此引用)"
+      },
+      {
+        "name": "body",
+        "type": "string",
+        "desc": "输出体 JournalIdentifier"
+      }
+    ]
+  },
+  "nx_unite_all": {
+    "properties": {},
+    "required": [],
+    "description": "Unite ALL solid bodies in the work part into one (unite everything). No parameters. Used when feature output produces multiple bodies (e.g. multiple closed loops in sketch).",
+    "returns": [
+      {
+        "name": "bodies_before",
+        "type": "number",
+        "desc": "合并前实体数"
+      },
+      {
+        "name": "bodies_after",
+        "type": "number",
+        "desc": "合并后实体数"
+      },
+      {
+        "name": "united",
+        "type": "boolean",
+        "desc": "bodies_after < bodies_before 时为 true（静默 no-op 可见）"
+      },
+      {
+        "name": "merged_from",
+        "type": "array",
+        "desc": "参与合并的实体名列表（journal_id 或 tag=...）"
+      },
+      {
+        "name": "sheets_skipped",
+        "type": "number",
+        "desc": "被跳过的片体数（>0 时出现）"
+      }
+    ]
+  },
+  "nx_sweep": {
+    "properties": {
+      "section": {
+        "type": "string",
+        "description": "Name of the section curve or sketch"
+      },
+      "guide": {
+        "type": "string",
+        "description": "Name of the guide curve or sketch"
+      },
+      "boolean": {
+        "type": "string",
+        "description": "none, unite, subtract, intersect"
+      },
+      "target": {
+        "type": "string",
+        "description": "Boolean target body: body name / journal_id / tag. Must be explicitly specified when multiple bodies exist."
+      }
+    },
+    "required": [
+      "section",
+      "guide"
+    ],
+    "description": "Sweep a single section along a guide curve (\"Sweep Along Guide\" in NX). Verified via committed journal cases.",
+    "returns": [
+      {
+        "name": "journal_id",
+        "type": "string",
+        "desc": "特征句柄 \"SWEEP(2)\" (NX2412 Name 为空, 用此引用)"
+      },
+      {
+        "name": "body",
+        "type": "string",
+        "desc": "输出体 JournalIdentifier"
+      }
+    ]
+  },
+  "nx_blend": {
+    "properties": {
+      "edges": {
+        "type": "array",
+        "description": "List of edge names to blend"
+      },
+      "radius": {
+        "type": "number",
+        "description": "Blend radius"
+      }
+    },
+    "required": [
+      "edges",
+      "radius"
+    ],
+    "description": "Create an edge blend (fillet) on specified edges.",
+    "returns": [
+      {
+        "name": "journal_id",
+        "type": "string",
+        "desc": "特征句柄 \"BLEND(2)\" (NX2412 Name 为空, 用此引用)"
+      }
+    ]
+  },
+  "nx_chamfer": {
+    "properties": {
+      "edges": {
+        "type": "array",
+        "description": "List of edge names to chamfer"
+      },
+      "offset": {
+        "type": "number",
+        "description": "Chamfer offset distance"
+      },
+      "offset2": {
+        "type": "string",
+        "description": "Second offset for asymmetric chamfer"
+      },
+      "angle": {
+        "type": "string",
+        "description": "Angle in degrees for angle-offset chamfer"
+      }
+    },
+    "required": [
+      "edges",
+      "offset"
+    ],
+    "description": "Create a chamfer on specified edges. Supports symmetric, asymmetric, and angle-offset modes."
+  },
+  "nx_hole": {
+    "properties": {
+      "diameter": {
+        "type": "number",
+        "description": "Hole diameter"
+      },
+      "depth": {
+        "type": "number",
+        "description": "Hole depth"
+      },
+      "x": {
+        "type": "number",
+        "description": "X coordinate of hole center (must be ON target body surface)"
+      },
+      "y": {
+        "type": "number",
+        "description": "Y coordinate of hole center"
+      },
+      "z": {
+        "type": "number",
+        "description": "Z coordinate of hole center"
+      },
+      "hole_type": {
+        "type": "string",
+        "description": "simple, counterbore, countersink (default simple)"
+      },
+      "face_reference": {
+        "type": "string",
+        "description": "Face name for target body resolution"
+      },
+      "direction": {
+        "type": "string",
+        "description": "Drilling direction: X, Y, Z, -X, -Y, -Z (default -Z)"
+      }
+    },
+    "required": [
+      "diameter",
+      "depth",
+      "x",
+      "y",
+      "z"
+    ],
+    "description": "Create a hole feature at the specified location. NX2412 uses HolePackageBuilder (verified). Supports simple hole, countersink, counterbore; depth, diameter, tip angle all configurable."
+  },
+  "nx_pattern": {
+    "properties": {
+      "features": {
+        "type": "array",
+        "description": "Target feature name (matched by Name/journal_id)"
+      },
+      "pattern_type": {
+        "type": "string",
+        "description": "linear|circular|polygon|spiral|along_path|helix|mirror"
+      },
+      "count": {
+        "type": "integer",
+        "description": "Number of instances (including original)"
+      },
+      "spacing": {
+        "type": "number",
+        "description": "Spacing between instances (mm)"
+      },
+      "direction": {
+        "type": "string",
+        "description": "Direction vector [i,j,k]"
+      },
+      "axis": {
+        "type": "string",
+        "description": "Rotation axis for circular patterns"
+      },
+      "angle_span": {
+        "type": "number",
+        "description": "Total angle to span (degrees)"
+      },
+      "reference_x": {
+        "type": "number",
+        "description": "X coordinate of pattern reference point"
+      },
+      "reference_y": {
+        "type": "number",
+        "description": "Y coordinate of pattern reference point"
+      },
+      "reference_z": {
+        "type": "number",
+        "description": "Z coordinate of pattern reference point"
+      },
+      "radial_count": {
+        "type": "integer",
+        "description": "Number of radial instances"
+      },
+      "radial_spacing": {
+        "type": "number",
+        "description": "Radial spacing between rows (mm)"
+      },
+      "center_x": {
+        "type": "number",
+        "description": "X coordinate of pattern center"
+      },
+      "center_y": {
+        "type": "number",
+        "description": "Y coordinate of pattern center"
+      },
+      "center_z": {
+        "type": "number",
+        "description": "Z coordinate of pattern center"
+      },
+      "number_of_sides": {
+        "type": "integer",
+        "description": "Number of polygon sides"
+      },
+      "number_of_turns": {
+        "type": "number",
+        "description": "Number of helix turns"
+      },
+      "total_angle": {
+        "type": "number",
+        "description": "Total spiral angle (degrees)"
+      },
+      "radial_pitch": {
+        "type": "number",
+        "description": "Radial pitch per turn (mm)"
+      },
+      "pitch": {
+        "type": "number",
+        "description": "Helix pitch (mm)"
+      },
+      "angle_pitch": {
+        "type": "number",
+        "description": "Angular pitch (degrees)"
+      },
+      "distance_pitch": {
+        "type": "number",
+        "description": "Distance pitch (mm)"
+      },
+      "helix_pitch": {
+        "type": "number",
+        "description": "Helix pitch (mm)"
+      },
+      "helix_span": {
+        "type": "number",
+        "description": "Helix span (degrees)"
+      },
+      "span": {
+        "type": "number",
+        "description": "Total span"
+      },
+      "path": {
+        "type": "string",
+        "description": "Path curve for pattern along curve"
+      },
+      "plane": {
+        "type": "string",
+        "description": "Mirror plane or pattern plane reference"
+      },
+      "y_count": {
+        "type": "integer",
+        "description": "Number of instances in Y direction"
+      },
+      "y_direction": {
+        "type": "string",
+        "description": "Y direction vector for 2D patterns"
+      },
+      "y_spacing": {
+        "type": "number",
+        "description": "Y direction spacing (mm)"
+      },
+      "rotation_angle": {
+        "type": "number",
+        "description": "Per-instance rotation angle (degrees)"
+      }
+    },
+    "required": [
+      "features"
+    ],
+    "description": "Create a feature pattern of any supported type. Pattern types: rectangular | circular | along path | mirror | polygon | helix | spiral | fill. Each type has its own parameter set; unspecified parameters use NX defaults."
+  },
+  "nx_boolean": {
+    "properties": {
+      "boolean_type": {
+        "type": "string",
+        "description": "unite, subtract, intersect"
+      },
+      "targets": {
+        "type": "array",
+        "description": "Target bodies: body name / tag number / feature journal_id (first item = Target, rest are also targets; NX allows multiple targets in one Boolean)."
+      },
+      "tools": {
+        "type": "array",
+        "description": "Tool bodies: body name / tag number / feature journal_id"
+      }
+    },
+    "required": [
+      "boolean_type",
+      "targets"
+    ],
+    "description": "Perform a boolean operation (unite, subtract, intersect) between bodies."
+  },
+  "nx_delete_feature": {
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Name of the feature to delete"
+      },
+      "journal_id": {
+        "type": "string",
+        "description": "JournalIdentifier of the feature (works for unnamed features)"
+      }
+    },
+    "required": [],
+    "description": "Delete a feature by name or journal_id. Returns available features if not found."
+  },
+  "nx_edit_feature": {
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Feature name to edit"
+      },
+      "journal_id": {
+        "type": "string",
+        "description": "Feature journal_id (e.g. \"Pattern Feature(6)\")"
+      },
+      "params": {
+        "type": "object",
+        "description": "Key-value pairs of parameter names to new values"
+      }
+    },
+    "required": [
+      "params"
+    ],
+    "description": "Edit a feature's parameters by updating its expressions."
+  },
+  "nx_rebuild_model": {
+    "properties": {},
+    "required": [],
+    "description": "Trigger model rebuild after expression changes. UpdateManager.DoUpdate(UndoMarkId) + Session.SetUndoMark NX2412 runtime: no-arg DoUpdate() does NOT exist — must pass UndoMarkId",
+    "_noParams": true
+  },
+  "nx_mirror_body": {
+    "properties": {
+      "body": {
+        "type": "string",
+        "description": "Name of the body to mirror"
+      },
+      "plane": {
+        "type": "string",
+        "description": "Name of the datum plane for mirroring"
+      }
+    },
+    "required": [
+      "body",
+      "plane"
+    ],
+    "description": "Mirror a body across a datum plane."
+  },
+  "nx_shell": {
+    "properties": {
+      "thickness": {
+        "type": "number",
+        "description": "Wall thickness (positive, inward)."
+      },
+      "faces_to_remove": {
+        "type": "array",
+        "description": "Face names to remove (empty = inner hollow)."
+      },
+      "face_tags": {
+        "type": "array",
+        "description": "Face tags to remove (NX2412 faces are nameless;"
+      },
+      "body": {
+        "type": "string",
+        "description": "Target body: body name / journal_id / tag (must be explicitly specified when multiple bodies exist)."
+      },
+      "target": {
+        "type": "string",
+        "description": "Body or face to shell (hollow out)"
+      },
+      "thickness_flip": {
+        "type": "boolean",
+        "description": "Flip shell direction (default true = inward, verified on NX2412 2026-09-01)"
+      }
+    },
+    "required": [
+      "thickness"
+    ],
+    "description": "Shell (hollow out) a body by removing faces and offsetting the remaining walls to a uniform thickness.",
+    "returns": [
+      {
+        "name": "journal_id",
+        "type": "string",
+        "desc": "特征句柄 \"SHELL(2)\" (NX2412 Name 为空, 用此引用)"
+      },
+      {
+        "name": "body",
+        "type": "string",
+        "desc": "输出体 JournalIdentifier"
+      }
+    ]
+  },
+  "nx_draft": {
+    "properties": {
+      "faces": {
+        "type": "array",
+        "description": "Face names to draft"
+      },
+      "angle": {
+        "type": "number",
+        "description": "Draft angle in degrees"
+      },
+      "pull_direction": {
+        "type": "string",
+        "description": "Pull direction: X, Y, Z, -X, -Y, -Z"
+      },
+      "fixed_edge": {
+        "type": "string",
+        "description": "Edge or plane defining stationary reference"
+      }
+    },
+    "required": [
+      "faces",
+      "angle",
+      "pull_direction"
+    ],
+    "description": "Apply a draft angle to faces relative to a pull direction."
+  },
+  "nx_trim_body": {
+    "properties": {
+      "body": {
+        "type": "string",
+        "description": "Name of body to trim"
+      },
+      "cutting_tool": {
+        "type": "string",
+        "description": "Face, plane, or body used as cutting tool"
+      },
+      "side_to_keep": {
+        "type": "string",
+        "description": "positive or negative (default positive)"
+      }
+    },
+    "required": [
+      "body"
+    ],
+    "description": "Trim a solid body using a plane or face as the cutting tool."
+  },
+  "nx_loft": {
+    "properties": {
+      "sections": {
+        "type": "array",
+        "description": "Ordered list of section/sketch names"
+      },
+      "guide_curves": {
+        "type": "array",
+        "description": "Optional guide curves"
+      },
+      "boolean": {
+        "type": "string",
+        "description": "none, unite, subtract, intersect"
+      }
+    },
+    "required": [
+      "sections"
+    ],
+    "description": "Create a lofted solid/surface through two or more cross-section sketches."
+  },
+  "nx_tube": {
+    "properties": {
+      "guide_curve": {
+        "type": "string",
+        "description": "Name of the guide curve"
+      },
+      "outer_diameter": {
+        "type": "number",
+        "description": "Outer diameter (mm)"
+      },
+      "inner_diameter": {
+        "type": "number",
+        "description": "Inner diameter (mm), 0 = solid"
+      }
+    },
+    "required": [
+      "guide_curve",
+      "outer_diameter"
+    ],
+    "description": "Create a tube/pipe feature along a guide curve."
+  },
+  "nx_split_body": {
+    "properties": {
+      "body": {
+        "type": "string",
+        "description": "Name of the body to split"
+      },
+      "cutting_tool": {
+        "type": "string",
+        "description": "Face, plane, or body used to split"
+      }
+    },
+    "required": [
+      "body"
+    ],
+    "description": "Split a solid body using a plane or face as the cutting tool."
+  },
+  "nx_offset_surface": {
+    "properties": {
+      "faces": {
+        "type": "array",
+        "description": "List of face names to offset"
+      },
+      "distance": {
+        "type": "number",
+        "description": "Offset distance (positive = outward, negative = inward)"
+      }
+    },
+    "required": [
+      "faces",
+      "distance"
+    ],
+    "description": "Offset faces of a body by a distance."
+  },
+  "nx_sew": {
+    "properties": {
+      "sheets": {
+        "type": "array",
+        "description": "List of sheet body names to sew"
+      },
+      "tolerance": {
+        "type": "number",
+        "description": "Sewing tolerance (default 0.01)"
+      }
+    },
+    "required": [
+      "sheets"
+    ],
+    "description": "Sew multiple sheet bodies into one."
+  },
+  "nx_thicken": {
+    "properties": {
+      "sheet_body": {
+        "type": "string",
+        "description": "Name of the sheet body to thicken"
+      },
+      "thickness": {
+        "type": "number",
+        "description": "Thickness value (mm)"
+      },
+      "direction": {
+        "type": "string",
+        "description": "Thicken direction: X, Y, Z (default Z)"
+      }
+    },
+    "required": [
+      "sheet_body"
+    ],
+    "description": "Thicken a sheet body into a solid."
+  },
+  "nx_helix": {
+    "properties": {
+      "pitch": {
+        "type": "number",
+        "description": "Pitch distance between turns"
+      },
+      "height": {
+        "type": "number",
+        "description": "Total height of the helix"
+      },
+      "radius": {
+        "type": "number",
+        "description": "Radius of the helix"
+      },
+      "axis": {
+        "type": "string",
+        "description": "Axis direction: X, Y, Z (default Z)"
+      },
+      "start_angle": {
+        "type": "number",
+        "description": "Start angle in degrees (default 0)"
+      }
+    },
+    "required": [
+      "pitch",
+      "height",
+      "radius"
+    ],
+    "description": "Create a helix curve. Output curve/feature auto-named HELIX{N}. Parameters: number of turns, pitch, radius, right/left hand, taper angle, limits."
+  },
+  "nx_text_curve": {
+    "properties": {
+      "text": {
+        "type": "string",
+        "description": "Text string to create"
+      },
+      "font": {
+        "type": "string",
+        "description": "Font name (e.g. \"blockfont\")"
+      },
+      "height": {
+        "type": "number",
+        "description": "Character height (mm)"
+      },
+      "length": {
+        "type": "number",
+        "description": "Text length (mm); 0 = auto"
+      },
+      "origin_x": {
+        "type": "number",
+        "description": "X coordinate of text origin"
+      },
+      "origin_y": {
+        "type": "number",
+        "description": "Y coordinate of text origin"
+      },
+      "origin_z": {
+        "type": "number",
+        "description": "Z coordinate of text origin"
+      }
+    },
+    "required": [],
+    "description": "Create planar text as curves (TextBuilder, Types.Planar). Verified 2026-08-04: Features.CreateTextBuilder(null) — NXOpen.Features.TextBuilder TextString (string), Type = Types.Planar, SelectFont(font, script) PlanarFrame = RectangularFrameBuilder (CoordinateSystem + Length/Height Expression + UpdateOnCoordinateSystem)"
+  },
+  "nx_sheet_metal_flange": {
+    "properties": {
+      "sketch_name": {
+        "type": "string",
+        "description": "Sketch containing the flange profile"
+      },
+      "thickness": {
+        "type": "number",
+        "description": "Sheet thickness (mm)"
+      },
+      "bend_radius": {
+        "type": "number",
+        "description": "Bend radius (mm)"
+      }
+    },
+    "required": [],
+    "description": "nx_sheet_metal_flange"
+  },
+  "nx_sheet_metal_flat": {
+    "properties": {
+      "action": {
+        "type": "string",
+        "description": "\"create\"|\"delete\" the flat pattern"
+      }
+    },
+    "required": [],
+    "description": "nx_sheet_metal_flat"
+  },
+  "nx_sheet_metal_bend": {
+    "properties": {
+      "bend_radius": {
+        "type": "number",
+        "description": "Bend radius (mm)"
+      },
+      "angle": {
+        "type": "number",
+        "description": "Bend angle (degrees)"
+      }
+    },
+    "required": [],
+    "description": "nx_sheet_metal_bend"
+  },
+  "nx_sketch_status": {
+    "properties": {},
+    "required": [],
+    "description": "Read sketch solver status: status enum, dof, constraint total, update scope.",
+    "_noParams": true
+  },
+  "nx_sketch_constraints": {
+    "properties": {
+      "details": {
+        "type": "boolean",
+        "description": "Include per-constraint geometry and expression details (default: true)."
+      }
+    },
+    "required": [],
+    "description": "Enumerate sketch constraints: per-type counts, geometry, and driving expressions."
+  },
+  "nx_intent_snapshot": {
+    "properties": {
+      "include_expressions": {
+        "type": "boolean",
+        "description": "Include expressions in snapshot (default: true)."
+      },
+      "include_measure": {
+        "type": "boolean",
+        "description": "Include body mass properties (default: false)."
+      }
+    },
+    "required": [],
+    "description": "Composite snapshot: feature tree, expressions, sketch status, constraint counts, optional body measure."
+  },
+  "nx_create_sketch": {
+    "properties": {
+      "plane": {
+        "type": "string",
+        "description": "Reference plane: \"XY\" (default), \"XZ\", or \"YZ\"."
+      },
+      "name": {
+        "type": "string",
+        "description": "Sketch name (default: auto-generated)."
+      }
+    },
+    "required": [],
+    "description": "Create a new sketch on the specified reference plane (XY, XZ, or YZ). Uses NX2412 CreateNewSketchInPlaceBuilder(None) and iterates Datums to find the matching datum plane reference."
+  },
+  "nx_sketch_line": {
+    "properties": {
+      "x1": {
+        "type": "number",
+        "description": "Start point X coordinate (sketch-local)."
+      },
+      "y1": {
+        "type": "number",
+        "description": "Start point Y coordinate (sketch-local)."
+      },
+      "x2": {
+        "type": "number",
+        "description": "End point X coordinate (sketch-local)."
+      },
+      "y2": {
+        "type": "number",
+        "description": "End point Y coordinate (sketch-local)."
+      },
+      "name": {
+        "type": "string",
+        "description": "Curve name (set AFTER AddGeometry, for nx_sketch_fillet/chamfer resolution)."
+      }
+    },
+    "required": [
+      "x1",
+      "y1",
+      "x2",
+      "y2"
+    ],
+    "description": "Create a line in the active sketch from (x1, y1) to (x2, y2). Uses Curves.CreateLine and sketch.AddGeometry. Re-activates the sketch after each operation to keep it active."
+  },
+  "nx_sketch_arc": {
+    "properties": {
+      "cx": {
+        "type": "number",
+        "description": "Center X coordinate (sketch-local)."
+      },
+      "cy": {
+        "type": "number",
+        "description": "Center Y coordinate (sketch-local)."
+      },
+      "radius": {
+        "type": "number",
+        "description": "Arc radius (sketch-local units)."
+      },
+      "start_angle": {
+        "type": "number",
+        "description": "Start angle in degrees."
+      },
+      "end_angle": {
+        "type": "number",
+        "description": "End angle in degrees."
+      }
+    },
+    "required": [
+      "cx",
+      "cy",
+      "radius",
+      "start_angle",
+      "end_angle"
+    ],
+    "description": "Create an arc in the active sketch given center, radius, start and end angles. Uses Curves.CreateArc(center, xDir, yDir, radius, startRad, endRad). Angles are converted from degrees to radians."
+  },
+  "nx_sketch_rectangle": {
+    "properties": {
+      "x1": {
+        "type": "number",
+        "description": "First corner X (sketch-local)."
+      },
+      "y1": {
+        "type": "number",
+        "description": "First corner Y (sketch-local)."
+      },
+      "x2": {
+        "type": "number",
+        "description": "Opposite corner X (sketch-local)."
+      },
+      "y2": {
+        "type": "number",
+        "description": "Opposite corner Y (sketch-local)."
+      }
+    },
+    "required": [
+      "x1",
+      "y1",
+      "x2",
+      "y2"
+    ],
+    "description": "Create a rectangle in the active sketch from corner (x1, y1) to (x2, y2). Constructs four lines connecting the corners in order."
+  },
+  "nx_sketch_circle": {
+    "properties": {
+      "cx": {
+        "type": "number",
+        "description": "Center X (sketch-local)."
+      },
+      "cy": {
+        "type": "number",
+        "description": "Center Y (sketch-local)."
+      },
+      "radius": {
+        "type": "number",
+        "description": "Circle radius (sketch-local units)."
+      }
+    },
+    "required": [
+      "cx",
+      "cy",
+      "radius"
+    ],
+    "description": "Create a circle in the active sketch from center point and radius. Uses Curves.CreateArc with a full 2*PI sweep (circle is a 360-degree arc)."
+  },
+  "nx_sketch_constraint": {
+    "properties": {
+      "constraint_type": {
+        "type": "string",
+        "description": "Constraint type: \"horizontal\"|\"vertical\"|\"parallel\"|\"perpendicular\"|\"tangent\"|\"coincident\"|\"equal\"|\"fix\"|\"symmetric\"|\"midpoint\""
+      },
+      "targets": {
+        "type": "array",
+        "description": "Array of sketch entity indices to constrain"
+      },
+      "value": {
+        "type": "string",
+        "description": "Dimension value (required for type=dimension)."
+      }
+    },
+    "required": [],
+    "description": "Apply a constraint to sketch geometry. Supports geometric constraints: horizontal, vertical, parallel, perpendicular, tangent, equal_length, fix, coincident, midpoint, concentric. Supports dimensional constraints: dimension (requires 'value' parameter)."
+  },
+  "nx_finish_sketch": {
+    "properties": {},
+    "required": [],
+    "description": "Finish (exit) the currently active sketch. NX2412: Deactivate requires two arguments — ViewReorient and UpdateLevel.",
+    "_noParams": true
+  },
+  "nx_sketch_trim": {
+    "properties": {
+      "curves_to_trim": {
+        "type": "array",
+        "description": "Curves to trim (by name)."
+      },
+      "boundary_curves": {
+        "type": "array",
+        "description": "Boundary curves (default: all other curves)."
+      }
+    },
+    "required": [
+      "curves_to_trim"
+    ],
+    "description": "Trim sketch curves to their intersection points with boundary curves. Uses Features.CreateTrimCurveBuilder for each curve."
+  },
+  "nx_sketch_spline": {
+    "properties": {
+      "points": {
+        "type": "array",
+        "description": "List of [x, y] points (sketch-local) the spline passes through."
+      },
+      "closed": {
+        "type": "boolean",
+        "description": "Close the spline (default false)."
+      }
+    },
+    "required": [
+      "points"
+    ],
+    "description": "Create a spline curve through a series of points in the active sketch. Uses Curves.CreateSplineByPoints with a Point3d array."
+  },
+  "nx_sketch_mirror": {
+    "properties": {
+      "curves": {
+        "type": "array",
+        "description": "Curves to mirror (by name)."
+      },
+      "centerline": {
+        "type": "string",
+        "description": "Centerline curve name (mirror axis)."
+      }
+    },
+    "required": [
+      "curves",
+      "centerline"
+    ],
+    "description": "Mirror sketch geometry across a centerline. Uses Curves.CreateMirrorCurve for each curve, then adds results to the sketch."
+  },
+  "nx_sketch_ellipse": {
+    "properties": {
+      "cx": {
+        "type": "number",
+        "description": "Center X (sketch-local)."
+      },
+      "cy": {
+        "type": "number",
+        "description": "Center Y (sketch-local)."
+      },
+      "major_radius": {
+        "type": "number",
+        "description": "Major radius."
+      },
+      "minor_radius": {
+        "type": "number",
+        "description": "Minor radius."
+      },
+      "rotation_angle": {
+        "type": "number",
+        "description": "Rotation in degrees (default 0)."
+      }
+    },
+    "required": [
+      "cx",
+      "cy",
+      "major_radius",
+      "minor_radius"
+    ],
+    "description": "Create an ellipse in the active sketch. Uses Curves.CreateEllipseBuilder with center, major/minor radii, and rotation angle. Rotation angle is converted from degrees to radians."
+  },
+  "nx_sketch_offset": {
+    "properties": {
+      "curves": {
+        "type": "array",
+        "description": "Curves to offset (by name)."
+      },
+      "distance": {
+        "type": "number",
+        "description": "Offset distance (mm; sign depends on side)."
+      },
+      "side": {
+        "type": "string",
+        "description": "'left', 'right', or 'both' (default 'right')."
+      }
+    },
+    "required": [
+      "curves",
+      "distance"
+    ],
+    "description": "Offset sketch curves by a specified distance. Uses Curves.CreateOffsetCurveBuilder for each curve. Side parameter: 'left', 'right', or 'both' (default 'right')."
+  },
+  "nx_list_sketches": {
+    "properties": {},
+    "required": [],
+    "description": "List all sketch names in the work part.",
+    "_noParams": true
+  },
+  "nx_sketch_fillet": {
+    "properties": {
+      "radius": {
+        "type": "number",
+        "description": "Fillet radius."
+      },
+      "curves": {
+        "type": "array",
+        "description": "2 or 3 curves to fillet (by name)."
+      },
+      "create_dimension": {
+        "type": "boolean",
+        "description": "Create radius dimension (default false)."
+      }
+    },
+    "required": [
+      "radius",
+      "curves"
+    ],
+    "description": "Create a fillet (rounded corner) between two sketch curves. Uses SketchCollection.CreateFilletBuilder() (NX2312+ internal API). Verified 2026-08-04: CurvesToFillet = SelectNXObjectList.Add(NXObject) FilletRadius = Expression.Value, CreateRadiusDimension (bool), LockRadius (bool) ThirdCurve (NXObject) + DeleteThirdCurve (bool) for 3-curve fillets"
+  },
+  "nx_sketch_chamfer": {
+    "properties": {
+      "curves": {
+        "type": "array",
+        "description": "Curves to chamfer (by name)."
+      },
+      "option": {
+        "type": "string",
+        "description": "symmetric (default), asymmetric, offsetandangle."
+      },
+      "distance1": {
+        "type": "number",
+        "description": "First offset (symmetric/asymmetric)."
+      },
+      "distance2": {
+        "type": "number",
+        "description": "Second offset (asymmetric)."
+      },
+      "angle": {
+        "type": "number",
+        "description": "Chamfer angle in degrees (offsetandangle)."
+      },
+      "trim_input_curves": {
+        "type": "boolean",
+        "description": "Trim input curves (default true)."
+      }
+    },
+    "required": [
+      "curves"
+    ],
+    "description": "Create a chamfer between two sketch curves. Uses SketchCollection.CreateSketchChamferBuilder() (NX7.5+ public API). Verified 2026-08-04: CurvesToChamfer = SelectDisplayableObjectList.Add(DisplayableObject) ChamferOption = ChamferOptions.Symmetric/Asymmetric/OffsetandAngle Distance1/Distance2/Angle = Expression.Value, TrimInputCurves (bool)"
+  },
+  "nx_through_curves": {
+    "properties": {
+      "sketch_names": {
+        "type": "array",
+        "description": "Ordered section sketch names (2+)."
+      },
+      "body_preference": {
+        "type": "string",
+        "description": "\"solid\"|\"sheet\" body type preference"
+      },
+      "closed": {
+        "type": "boolean",
+        "description": "Close the surface (loop back to first curve)"
+      }
+    },
+    "required": [
+      "sketch_names"
+    ],
+    "description": "Through Curves — loft through multiple section sketches. Source: FeatureCollection.CreateThroughCurvesBuilder; SectionsList (SectionList)"
+  },
+  "nx_ruled": {
+    "properties": {
+      "sketch1": {
+        "type": "string",
+        "description": "First section sketch name"
+      },
+      "sketch2": {
+        "type": "string",
+        "description": "Second section sketch name"
+      },
+      "body_preference": {
+        "type": "string",
+        "description": "\"solid\"|\"sheet\" body type preference"
+      }
+    },
+    "required": [],
+    "description": "Ruled Surface — simple ruled surface between two section curves. Source: FeatureCollection.CreateRuledBuilder; FirstSection/SecondSection (Section)"
+  },
+  "nx_studio_surface": {
+    "properties": {
+      "section_sketches": {
+        "type": "array",
+        "description": "Array of section sketch names"
+      },
+      "guide_sketches": {
+        "type": "array",
+        "description": "Array of guide sketch names"
+      }
+    },
+    "required": [],
+    "description": "Studio Surface — freeform surface through section and guide curves. Source: FeatureCollection.CreateStudioSurfaceBuilder; SectionList/GuideList (SectionList)"
+  },
+  "nx_extend_surface": {
+    "properties": {
+      "face_tags": {
+        "type": "array",
+        "description": "Face(s) whose edges to extend."
+      },
+      "length": {
+        "type": "number",
+        "description": "Extension length in mm (DistanceType=ByLength)."
+      }
+    },
+    "required": [
+      "face_tags",
+      "length"
+    ],
+    "description": "Extend Surface — extend sheet body edges. Source: verified on NX2412. Supports extend to face, by distance, or to plane."
+  },
+  "nx_midsurface": {
+    "properties": {
+      "face_tags1": {
+        "type": "array",
+        "description": "First set of face tags for mid-surface"
+      },
+      "face_tags2": {
+        "type": "array",
+        "description": "Second set of face tags for mid-surface"
+      },
+      "auto_stitch": {
+        "type": "boolean",
+        "description": "Auto-stitch result surfaces"
+      },
+      "tolerance": {
+        "type": "number",
+        "description": "Stitching tolerance (mm)"
+      }
+    },
+    "required": [],
+    "description": "Mid Surface — create midsurface between opposing faces. Verified 2026-08-17 (NX2412): FacePairing = NXOpen.GeometricUtilities.FacePairingBuilder; InputSolidBodies (ScCollector, CreateRuleBodyDumb+ReplaceRules) + IncludeFace(face) → Commit. CollectorPairList path NOT used (throws \"constrained property out of limits\")."
+  },
+  "nx_move_face": {
+    "properties": {
+      "face_tags": {
+        "type": "array",
+        "description": "Face tags to move."
+      },
+      "face_tag": {
+        "type": "integer",
+        "description": "Single face tag (alternative to face_tags)."
+      },
+      "distance": {
+        "type": "number",
+        "description": "Move distance (default 10)."
+      },
+      "direction": {
+        "type": "string",
+        "description": "x, y, z, -x, -y, -z (default z)."
+      }
+    },
+    "required": [
+      "face_tags"
+    ],
+    "description": "Move faces using synchronous modeling (MoveFaceBuilder)."
+  },
+  "nx_resize_face": {
+    "properties": {
+      "face_tag": {
+        "type": "integer",
+        "description": "Single face tag (alternative to face_tags)."
+      },
+      "diameter": {
+        "type": "number",
+        "description": "New diameter value (mm) for cylindrical faces"
+      }
+    },
+    "required": [],
+    "description": "Move faces using synchronous modeling (MoveFaceBuilder)."
+  },
+  "nx_delete_face_sync": {
+    "properties": {
+      "face_tags": {
+        "type": "array",
+        "description": "Face tags to move."
+      },
+      "heal": {
+        "type": "boolean",
+        "description": "Heal the gap after deletion"
+      }
+    },
+    "required": [
+      "face_tags"
+    ],
+    "description": "Move faces using synchronous modeling (MoveFaceBuilder)."
+  },
+  "nx_replace_blend": {
+    "properties": {
+      "face_tag": {
+        "type": "integer",
+        "description": "Single face tag (alternative to face_tags)."
+      }
+    },
+    "required": [],
+    "description": "Move faces using synchronous modeling (MoveFaceBuilder)."
+  },
+  "nx_resize_blend": {
+    "properties": {
+      "face_tag": {
+        "type": "integer",
+        "description": "Single face tag (alternative to face_tags)."
+      },
+      "radius": {
+        "type": "number",
+        "description": "New blend radius (mm)"
+      }
+    },
+    "required": [],
+    "description": "Move faces using synchronous modeling (MoveFaceBuilder)."
+  },
+  "nx_offset_region": {
+    "properties": {
+      "face_tags": {
+        "type": "array",
+        "description": "Face tags to offset."
+      },
+      "offset": {
+        "type": "number",
+        "description": "Offset distance in mm (0 is rejected)."
+      }
+    },
+    "required": [
+      "face_tags",
+      "offset"
+    ],
+    "description": "Offset a face region (AdmOffsetRegionBuilder)."
+  },
+  "nx_fit_view": {
+    "properties": {},
+    "required": [],
+    "description": "Fit all visible objects in the graphics viewport. Maps to NXOpen Part.ModelingViews.WorkView.Fit().",
+    "_noParams": true
+  },
+  "nx_set_view": {
+    "properties": {
+      "orientation": {
+        "type": "string",
+        "description": "View orientation: \"top\"|\"bottom\"|\"front\"|\"back\"|\"left\"|\"right\"|\"isometric\"|\"trimetric\""
+      }
+    },
+    "required": [],
+    "description": "Set the graphics view orientation (front, back, top, bottom, left, right, isometric, trimetric). Maps to NXOpen View.Orient() with the corresponding ViewOrientation enum."
+  },
+  "nx_undo": {
+    "properties": {},
+    "required": [],
+    "description": "Undo the last visible operation. NX2412: UndoLastNVisibleMarks requires 3 parameters: (int n, out bool marksRecycled, out bool undoUnavailable). Falls back to UndoToLastVisibleMark() if the 3-param version is not available.",
+    "_noParams": true
+  },
+  "nx_screenshot": {
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Absolute path for the screenshot image file"
+      }
+    },
+    "required": [],
+    "description": "Capture the current graphics viewport as a PNG image. Uses UFSession.Disp.CreateImageExportBuilder() for viewport capture."
+  },
+  "nx_run_journal": {
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Journal file path, must end in .cs (.NET)."
+      }
+    },
+    "required": [
+      "path"
+    ],
+    "description": "Execute an NX .NET journal (.cs) file. Python (.py) journals are not supported: NX2412 removed Session.ExecuteJournal() and no replacement exists — convert the journal to .cs."
+  },
+  "nx_record_start": {
+    "properties": {},
+    "required": [],
+    "description": "[未实现] 开始录制 NX Journal。NX2412 已移除 Session.BeginJournalRecording()，请使用 NX 菜单 Tools > Journal > Record。",
+    "_noParams": true
+  },
+  "nx_record_stop": {
+    "properties": {},
+    "required": [],
+    "description": "[未实现] 停止录制 NX Journal。NX2412 已移除 Session.EndJournalRecording()，请使用 NX 菜单 Tools > Journal > Stop。",
+    "_noParams": true
+  },
+  "nx_list_undo_marks": {
+    "properties": {},
+    "required": [],
+    "description": "List all available undo marks (pmarks) for rollback. NX2412: Session.GetUndoMarkCount() doesn't exist. Use Session.GetAllVisibleUndoMarks() instead.",
+    "_noParams": true
+  },
+  "nx_open": {
+    "properties": {
+      "nx_path": {
+        "type": "string",
+        "description": "Path to ugraf.exe. Optional — when omitted it is auto-detected (UGII_BASE_DIR, then NX_ROOT, then a scan of Program Files\\Siemens\\NX*); if nothing is found the call fails with an error instead of guessing a path."
+      },
+      "part_path": {
+        "type": "string",
+        "description": ".prt file to open on launch (optional)."
+      },
+      "custom_dir": {
+        "type": "string",
+        "description": "Path to custom_dirs.dat, exported as UGII_CUSTOM_DIRECTORY_FILE. Optional — auto-detected next to the plugin directory."
+      }
+    },
+    "required": [],
+    "description": "Launch Siemens NX with the MCP plugin loaded via PowerShell Start-Process (tries pwsh.exe, then Windows PowerShell 5.1). nx_path is optional and auto-detected. If NX is already running the call returns already_running instead of launching a second instance."
+  },
+  "nx_close": {
+    "properties": {
+      "force": {
+        "type": "boolean",
+        "description": "If true, kill the process immediately. Default: false."
+      }
+    },
+    "required": [],
+    "description": "Close all open parts and exit Siemens NX, discarding all unsaved changes. force=true kills the NX process immediately; if the graceful close fails the tool falls back to killing the process."
+  },
+  "nx_activate_view": {
+    "properties": {
+      "view_name": {
+        "type": "string",
+        "description": "Name of the view to activate (case-insensitive)."
+      }
+    },
+    "required": [],
+    "description": "Activate (set as WorkView) a modeling view by name, or list all available views when no name is given."
+  },
+  "nx_probe_builder": {
+    "properties": {
+      "factory": {
+        "type": "string",
+        "description": "Probe builder factory type"
+      }
+    },
+    "required": [],
+    "description": "Probe a builder's real API via reflection. Params: factory (string) — e.g. \"CreateAdmResizeFaceBuilder\""
+  },
+  "nx_validate_model": {
+    "properties": {
+      "validation_type": {
+        "type": "string",
+        "description": "Validation type: \"geometry\"|\"topology\"|\"self_intersections\"|\"tiny_edges\""
+      }
+    },
+    "required": [],
+    "description": "Validate the current model for topology, geometry, intent, or manufacturability issues. Based on Parasolid V35 rules. Returns a structured validation report. Supports validation_type: topology, geometry, intent, manufacturability, all."
+  },
+  "nx_validate_feature": {
+    "properties": {
+      "feature_name": {
+        "type": "string",
+        "description": "Feature name to validate"
+      }
+    },
+    "required": [],
+    "description": "Validate a single feature by name. Checks feature health, output body validity, and degenerate geometry. Features are identified by name (case-insensitive)."
+  },
+  "nx_wave_link": {
+    "properties": {
+      "body_tags": {
+        "type": "array",
+        "description": "Body tags to create associative links for"
+      },
+      "associative": {
+        "type": "boolean",
+        "description": "Maintain associativity (default: true)"
+      }
+    },
+    "required": [],
+    "description": "WAVE Link - create associative linked copy of geometry from another part. Forum-verified (2026-07-31): WAVE link requires OCCURRENCE body, not prototype. Path: workPart.BaseFeatures.CreateWaveLinkBuilder → ExtractFaceBuilder.BodyToExtract.Add(occurrenceBody) Assembly mode: component.FindOccurrence(prototypeBody) → occurrence Single-part mode: body directly via ExtractFaceBuilder (same-part WAVE)"
+  },
+  "nx_extract_geometry": {
+    "properties": {
+      "face_tags": {
+        "type": "array",
+        "description": "Face tags to extract"
+      },
+      "associative": {
+        "type": "boolean",
+        "description": "Maintain associativity (default: true)"
+      }
+    },
+    "required": [],
+    "description": "Extract Geometry - extract faces from a body as separate geometry. Runtime probe: FacesToExtract (SelectFaceList) + Associative (bool writable)"
+  },
+  "nx_create_component": {
+    "properties": {
+      "bodies": {
+        "type": "array",
+        "description": "Body name / journal id list (with matching); default = all solid bodies in the work part"
+      },
+      "names": {
+        "type": "array",
+        "description": "Per-body component names (default = body name with brackets removed, uppercased)"
+      },
+      "dir": {
+        "type": "string",
+        "description": "Directory for new .prt files (default = work part directory)"
+      },
+      "keep_originals": {
+        "type": "boolean",
+        "description": "true=copy and keep original bodies; false=move (NX default, originals deleted)"
+      },
+      "fix": {
+        "type": "boolean",
+        "description": "Fix component after creation (default true, asm-06 Positioner Fix recipe)"
+      }
+    },
+    "required": [],
+    "description": "Create new component(s) (.prt) from work part bodies and assemble them into the current assembly. Each body becomes a separate component in its own .prt file."
+  },
+  "nx_find_same_bodies": {
+    "properties": {
+      "bodies": {
+        "type": "array",
+        "description": "Body name list (default = all solid bodies)"
+      },
+      "tolerance": {
+        "type": "number",
+        "description": "Relative tolerance (default 0.001 = 0.1%)"
+      }
+    },
+    "required": [],
+    "description": "Find bodies with identical geometry (19.1 algorithm: centroid + surface sampling distance sequence, relative tolerance). Returns groups of matching body names."
+  },
+  "nx_bodies_to_assembly": {
+    "properties": {
+      "bodies": {
+        "type": "array",
+        "description": "Body name list (default = all solid bodies)"
+      },
+      "dedupe": {
+        "type": "boolean",
+        "description": "Merge identical bodies (default true)"
+      },
+      "tolerance": {
+        "type": "number",
+        "description": "19.1 relative tolerance (default 0.001)"
+      },
+      "dir": {
+        "type": "string",
+        "description": "Directory for new .prt files (default = work part directory)"
+      },
+      "fix": {
+        "type": "boolean",
+        "description": "Fix all components after creation (default true)"
+      }
+    },
+    "required": [],
+    "description": "Convert bodies of a multi-body part into an assembly (19.1 related). Each body becomes a component in a new .prt file, then assembled into the work part."
+  },
+  "nx_asm_constraints": {
+    "properties": {},
+    "required": [],
+    "description": "List assembly constraints per component: type, alignment, solver status and geometry references.",
+    "_noParams": true
+  },
+  "nx_bom_extract": {
+    "properties": {
+      "tree": {
+        "type": "boolean",
+        "description": "Also output nested level tree (default false)"
+      }
+    },
+    "required": [],
+    "description": "Extract BOM data (part name × quantity × level) from the full assembly tree. Returns flat list and optionally nested tree structure."
+  }
+}
