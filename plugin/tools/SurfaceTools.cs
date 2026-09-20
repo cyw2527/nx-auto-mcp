@@ -6,9 +6,12 @@ namespace NxMcpPlugin.Tools.Surface
 {
     /// <summary>
     /// Common helper: create a Section from sketch/curve tags via SelectionIntentRule.
+    /// 实测验证: CreateRuleCurveDumb(Curve[]) exists; CreateRuleSketch does NOT.
+    /// Sketch → use sketch.curves (sketch geometry) via CreateRuleCurveDumb.
     /// </summary>
     internal static class SectionHelper
     {
+        // 调试日志写到系统临时目录, 避免依赖任何本机绝对路径
         private static readonly string LogPath = System.IO.Path.Combine(
             System.IO.Path.GetTempPath(), "nx-mcp-surface-debug.log");
 
@@ -17,32 +20,37 @@ namespace NxMcpPlugin.Tools.Surface
                 DateTime.Now.ToString("s") + " " + msg + "\n"); } catch { }
         }
 
-        /// <summary>Create Section from a sketch name.</summary>
+        /// <summary>Create Section from a sketch name. EXACT COPY of ExtrudeTool pattern (ModelingTools.cs:157-241).</summary>
         public static dynamic CreateSectionFromSketch(dynamic wp, string sketchName)
         {
             if (wp == null || string.IsNullOrEmpty(sketchName)) { Log("NULL wp/name"); return null; }
             try
             {
+                // Step 1: Find sketch
                 dynamic found = null; int sketchCount = 0;
                 foreach (dynamic sk in wp.Sketches)
                 { sketchCount++; if (sk != null) { try { if (sk.Name == sketchName || sk.Name.ToString().EndsWith(sketchName)) { found = sk; break; } } catch { } } }
                 if (found == null) { Log("SKETCH_NOT_FOUND: " + sketchName + " (checked " + sketchCount + " sketches)"); return null; }
                 Log("SKETCH_FOUND: " + sketchName);
 
+                // Step 2: Create section
                 dynamic section = wp.Sections.CreateSection(0.00095, 0.001, 0.01);
                 Log("SECTION_CREATED: " + sketchName);
 
+                // Step 3: Get sketch curves
                 var curveList = new System.Collections.Generic.List<dynamic>();
                 try { dynamic sc = found.GetAllGeometry(); foreach (dynamic c in sc) { if (c != null) curveList.Add(c); } }
                 catch (Exception ex) { SectionHelper.Log("GETALLGEOM_EXCEPTION: " + sketchName + " -> " + ex.Message); }
                 if (curveList.Count == 0) { Log("GETALLGEOM_EMPTY: " + sketchName); return null; }
                 Log("GETALLGEOM_OK: " + sketchName + " -> " + curveList.Count + " curves");
 
+                // Step 4: Cast to IBaseCurve[]
                 var iBaseCurves = new System.Collections.Generic.List<NXOpen.IBaseCurve>();
                 foreach (dynamic curve in curveList) { try { iBaseCurves.Add((NXOpen.IBaseCurve)curve); } catch { } }
                 if (iBaseCurves.Count == 0) { Log("IBASECURVE_CAST_FAIL: " + sketchName + " (had " + curveList.Count + " curves)"); return null; }
                 Log("IBASECURVE_OK: " + sketchName + " -> " + iBaseCurves.Count);
 
+                // Step 5: Rule + AddToSection
                 NXOpen.IBaseCurve[] curveArray = iBaseCurves.ToArray();
                 dynamic rule = wp.ScRuleFactory.CreateRuleBaseCurveDumb(curveArray);
                 NXOpen.SelectionIntentRule selRule = (NXOpen.SelectionIntentRule)rule;
@@ -64,12 +72,14 @@ namespace NxMcpPlugin.Tools.Surface
 
         /// <summary>
         /// Fill a builder-owned section (FirstSection/SecondSection of Builder1 types) with a sketch's curves.
+        /// Verified 2026-08-04: RuledBuilder1 sections are read-only getters — builder owns them, AddToSection fills them.
         /// </summary>
         public static bool FillBuilderSection(dynamic section, dynamic wp, string sketchName)
         {
             try
             {
                 if (section == null) { Log("FILL_SECTION_NULL: " + sketchName); return false; }
+                // Find sketch
                 dynamic found = null;
                 foreach (dynamic sk in wp.Sketches)
                 {
@@ -77,6 +87,7 @@ namespace NxMcpPlugin.Tools.Surface
                 }
                 if (found == null) { Log("FILL_SKETCH_NOT_FOUND: " + sketchName); return false; }
 
+                // Get curves + cast to IBaseCurve
                 var iBaseCurves = new System.Collections.Generic.List<NXOpen.IBaseCurve>();
                 try
                 {
@@ -89,6 +100,7 @@ namespace NxMcpPlugin.Tools.Surface
                 catch (Exception ex) { SectionHelper.Log("FILL_GETALLGEOM_EXCEPTION: " + ex.Message); return false; }
                 if (iBaseCurves.Count == 0) { Log("FILL_GEOM_EMPTY: " + sketchName); return false; }
 
+                // Rule + AddToSection (same pattern as CreateSectionFromSketch steps 5)
                 NXOpen.IBaseCurve[] curveArray = iBaseCurves.ToArray();
                 dynamic rule = wp.ScRuleFactory.CreateRuleBaseCurveDumb(curveArray);
                 NXOpen.SelectionIntentRule selRule = (NXOpen.SelectionIntentRule)rule;
@@ -131,6 +143,10 @@ namespace NxMcpPlugin.Tools.Surface
 
     /// <summary>
     /// Through Curves — loft through multiple section sketches.
+    /// Source: FeatureCollection.CreateThroughCurvesBuilder; SectionsList (SectionList)
+    ///
+    /// Parameters:
+    ///   sketch_names (string[], required) -- Ordered section sketch names (2+).
     /// </summary>
     public class ThroughCurvesTool : IToolHandler
     {
@@ -148,6 +164,7 @@ namespace NxMcpPlugin.Tools.Surface
                 string bodyPref = (p.Value<string>("body_preference") ?? "solid").Trim().ToLowerInvariant();
                 bool closed = p.Value<bool?>("closed") ?? false;
 
+                // Source: runtime probe → SectionsList (SectionList), add via CreateSection
                 dynamic builder = ((dynamic)wp.Features).CreateThroughCurvesBuilder(null);
                 int added = 0;
                 foreach (JToken s in sketches)
@@ -181,7 +198,7 @@ namespace NxMcpPlugin.Tools.Surface
                 var data = new JObject();
                 data.Add("section_count", added);
                 data.Add("body_preference", bodyPref);
-                return ToolResult.Ok(string.Format("Through Curves: {0} sections -> {1}.", added, bodyPref), data).ToJson();
+                return ToolResult.Ok(string.Format("Through Curves: {0} sections → {1}.", added, bodyPref), data).ToJson();
             }
             catch (Exception ex) { return ToolResult.Fail("nx_through_curves: " + ex.Message).ToJson(); }
         }
@@ -189,6 +206,7 @@ namespace NxMcpPlugin.Tools.Surface
 
     /// <summary>
     /// Ruled Surface — simple ruled surface between two section curves.
+    /// Source: FeatureCollection.CreateRuledBuilder; FirstSection/SecondSection (Section)
     /// </summary>
     public class RuledSurfaceTool : IToolHandler
     {
@@ -206,11 +224,18 @@ namespace NxMcpPlugin.Tools.Surface
                     return ToolResult.Fail("sketch1 and sketch2 required.").ToJson();
                 string bodyPref = (p.Value<string>("body_preference") ?? "solid").Trim().ToLowerInvariant();
 
+                // Source: runtime probe → FirstSection/SecondSection (Section, writable)
+                // 2026-08-04 verification chain:
+                //   old RuledBuilder: setters exist, but Commit threw "指定的公差需要三个数" (fixed by PositionTolerance=0.001),
+                //     then "没有选择轮廓" — sections assigned from Sections.CreateSection not accepted.
+                //   RuledBuilder1 (FeatureCollection.FreeformSurfaceCollection.CreateRuledBuilder1):
+                //     FirstSection/SecondSection READ-ONLY = builder OWNS the sections — fill via AddToSection.
                 dynamic builder = wp.Features.FreeformSurfaceCollection.CreateRuledBuilder1(null);
                 bool ok1 = SectionHelper.FillBuilderSection(builder.FirstSection, wp, s1);
                 if (!ok1) return ToolResult.Fail("Fill section failed: " + s1).ToJson();
                 bool ok2 = SectionHelper.FillBuilderSection(builder.SecondSection, wp, s2);
                 if (!ok2) return ToolResult.Fail("Fill section failed: " + s2).ToJson();
+                // "指定的公差需要三个数" — Ruled needs the PositionTolerance set explicitly (both RuledBuilder variants)
                 builder.PositionTolerance = 0.001;
                 try { builder.SetBodyPreference(bodyPref == "sheet" ? 0 : 1); } catch { }
 
@@ -218,7 +243,7 @@ namespace NxMcpPlugin.Tools.Surface
                 var data = new JObject();
                 data.Add("sketch1", s1);
                 data.Add("sketch2", s2);
-                return ToolResult.Ok(string.Format("Ruled surface: {0} -> {1}.", s1, s2), data).ToJson();
+                return ToolResult.Ok(string.Format("Ruled surface: {0} → {1}.", s1, s2), data).ToJson();
             }
             catch (Exception ex)
             {
@@ -231,7 +256,12 @@ namespace NxMcpPlugin.Tools.Surface
 
     /// <summary>
     /// Studio Surface — freeform surface through section and guide curves.
+    /// Source: FeatureCollection.CreateStudioSurfaceBuilder; SectionList/GuideList (SectionList)
     /// </summary>
+    /// Parameters:
+    ///   section_sketches (string, optional) - section_sketches parameter.
+    ///   guide_sketches (string, optional) - guide_sketches parameter.
+    ///
     public class StudioSurfaceTool : IToolHandler
     {
         public string Name { get { return "nx_studio_surface"; } }
@@ -288,6 +318,12 @@ namespace NxMcpPlugin.Tools.Surface
 
     /// <summary>
     /// Extend Surface — extend sheet body edges.
+    /// Source: NX2412 实测 (2026-08-17): ExtensionBuilder.Selection = SelectNXObject (FACE-based);
+    ///   SetValue(face, view, point-on-face); Tolerance must be set; Type=Edge + ExtendType=Tangential + DistanceType=ByLength
+    ///
+    /// Parameters:
+    ///   face_tags (integer[], required) -- Face(s) whose edges to extend.
+    ///   length    (number, required)   -- Extension length in mm (DistanceType=ByLength).
     /// </summary>
     public class ExtendSurfaceTool : IToolHandler
     {
@@ -303,6 +339,7 @@ namespace NxMcpPlugin.Tools.Surface
                 if (faceTags.Count == 0) return ToolResult.Fail("face_tags array required.").ToJson();
                 double length = ToolHelpers.GetDouble(p, "length", 10.0);
 
+                // Work view for SetValue (may be null in headless; fall back to any view)
                 dynamic workView = null;
                 try { workView = wp.Views.WorkView; } catch (Exception ex) { SectionHelper.Log("view lookup: " + ex.Message); }
 
@@ -319,6 +356,7 @@ namespace NxMcpPlugin.Tools.Surface
                         builder.ExtendType = NXOpen.Features.ExtensionBuilder.Extension.Tangential;
                         builder.DistanceType = NXOpen.Features.ExtensionBuilder.Distance.ByLength;
                         builder.Length.RightHandSide = length.ToString();
+                        // Point on face = bbox center
                         double[] bb = new double[6];
                         try
                         {
@@ -345,6 +383,9 @@ namespace NxMcpPlugin.Tools.Surface
 
     /// <summary>
     /// Mid Surface — create midsurface between opposing faces.
+    /// Verified 2026-08-17 (NX2412): FacePairing = NXOpen.GeometricUtilities.FacePairingBuilder;
+    ///   InputSolidBodies (ScCollector, CreateRuleBodyDumb+ReplaceRules) + IncludeFace(face) → Commit.
+    ///   CollectorPairList path NOT used (throws "constrained property out of limits").
     /// </summary>
     public class MidSurfaceTool : IToolHandler
     {
@@ -368,6 +409,7 @@ namespace NxMcpPlugin.Tools.Surface
                 builder.DistanceTolerance = tolerance;
                 dynamic fp = builder.FacePairing;
 
+                // 1. InputSolidBodies: collect owning bodies of all faces (rule-based ScCollector)
                 var allTags = new System.Collections.Generic.List<int>(tags1);
                 allTags.AddRange(tags2);
                 var bodies = new System.Collections.Generic.List<dynamic>();
@@ -397,6 +439,7 @@ namespace NxMcpPlugin.Tools.Surface
                     fp.InputSolidBodies.ReplaceRules(rules, false);
                 }
 
+                // 2. IncludeFace all
                 int pairCount = 0;
                 foreach (int tag in allTags)
                 {
