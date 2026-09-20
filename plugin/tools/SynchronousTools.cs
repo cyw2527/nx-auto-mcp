@@ -4,6 +4,8 @@ using NXOpen;
 
 namespace NxMcpPlugin.Tools.Synchronous
 {
+    // Source: 实测验证 APIs for NX2412 — 2026-07-31
+
     /// <summary>Shared face-finding helper — delegates to ToolHelpers.</summary>
     internal static class SyncHelper
     {
@@ -42,7 +44,9 @@ namespace NxMcpPlugin.Tools.Synchronous
                 double dist = p.Value<double?>("distance") ?? 10.0;
                 string d = (p.Value<string>("direction") ?? "z").Trim().ToLowerInvariant();
 
+                // Source: 实测 → MoveFaceBuilder (NOT AdmMoveFaceBuilder) has Distance + SetDirection
                 dynamic b = ((dynamic)wp.Features).CreateMoveFaceBuilder(null);
+                // Set move type: 0=Distance along direction
                 try { b.SetType(0); } catch { }
 
                 int added = 0;
@@ -58,8 +62,10 @@ namespace NxMcpPlugin.Tools.Synchronous
 
                 if (added == 0) return ToolResult.Fail("No valid faces found. Face tags may have changed after restart.").ToJson();
 
+                // Set distance — Distance is Expression, use .Value (runtime probe verified)
                 ToolHelpers.SetExpressionValue(b, "Distance", dist);
 
+                // Set direction
                 double dx = 0, dy = 0, dz = 1;
                 if (d == "x") dx = 1; else if (d == "-x") dx = -1;
                 else if (d == "y") dy = 1; else if (d == "-y") dy = -1;
@@ -99,11 +105,14 @@ namespace NxMcpPlugin.Tools.Synchronous
                 double dia = p.Value<double?>("diameter") ?? 0;
                 if (dia <= 0) return ToolResult.Fail("diameter required.").ToJson();
 
+                // Source: 实测 → AdmResizeFaceBuilder.FaceToResize.Add() + .Diameter
                 dynamic b = ((dynamic)wp.Features).CreateAdmResizeFaceBuilder(null);
                 var f = SyncHelper.FindFaceByTag(wp, ft);
                 if (f == null) return ToolResult.Fail("Face not found: " + ft + ". Use nx_inspect_topology to list face tags.").ToJson();
+                // Runtime probe: FaceToResize is FaceRecognitionBuilder → FaceCollector.Add
                 if (!ToolHelpers.AddFaceToCollector(wp, b, "FaceToResize.FaceCollector", f))
                     return ToolResult.Fail("AddToCollector(FaceToResize) failed.").ToJson();
+                // Diameter is Expression (probe verified)
                 if (!ToolHelpers.SetExpressionValue(b, "Diameter", dia))
                     return ToolResult.Fail("SetExpressionValue(Diameter) failed.").ToJson();
                 b.Commit(); b.Destroy();
@@ -129,6 +138,7 @@ namespace NxMcpPlugin.Tools.Synchronous
                 if (fts == null || fts.Count == 0) return ToolResult.Fail("face_tags required.").ToJson();
                 bool heal = p.Value<bool?>("heal") ?? true;
 
+                // Source: 实测 → DeleteFaceBuilder.SetHeal(bool) + FaceCollector.Add()
                 dynamic b = ((dynamic)wp.Features).CreateDeleteFaceBuilder(null);
                 try { b.SetHeal(heal); } catch { }
                 int added = 0;
@@ -165,11 +175,13 @@ namespace NxMcpPlugin.Tools.Synchronous
                 if (ft == 0) return ToolResult.Fail("face_tag required.").ToJson();
                 bool inherit = !p.ContainsKey("radius");
 
+                // Source: 实测 → ReplaceBlendBuilder.FaceToReblend + InheritRadiusFromFace property
                 dynamic b = ((dynamic)wp.Features).CreateReplaceBlendBuilder(null);
                 var f = SyncHelper.FindFaceByTag(wp, ft);
                 if (f == null) return ToolResult.Fail("Face not found: " + ft).ToJson();
                 if (!ToolHelpers.AddFaceToCollector(wp, b, "FaceToReblend", f))
                     return ToolResult.Fail("AddToCollector(FaceToReblend) failed.").ToJson();
+                // Probe verified: InheritRadiusFromFace is writable Boolean, NO ShapeMatch property
                 try { b.InheritRadiusFromFace = inherit; } catch { }
                 b.Commit(); b.Destroy();
                 var data = new JObject();
@@ -196,11 +208,14 @@ namespace NxMcpPlugin.Tools.Synchronous
                 double r = p.Value<double?>("radius") ?? 0;
                 if (r <= 0) return ToolResult.Fail("radius required.").ToJson();
 
+                // Source: 实测 → ResizeBlendBuilder.BlendFace (single) + Radius (property)
                 dynamic b = ((dynamic)wp.Features).CreateResizeBlendBuilder(null);
                 var f = SyncHelper.FindFaceByTag(wp, ft);
                 if (f == null) return ToolResult.Fail("Face not found: " + ft).ToJson();
+                // Runtime probe: BlendFace is ScCollector (not single property!)
                 if (!ToolHelpers.AddFaceToCollector(wp, b, "BlendFace", f))
                     return ToolResult.Fail("AddToCollector(BlendFace) failed.").ToJson();
+                // Radius is Expression (probe verified)
                 ToolHelpers.SetExpressionValue(b, "Radius", r);
                 b.Commit(); b.Destroy();
                 var data = new JObject();
@@ -233,6 +248,7 @@ namespace NxMcpPlugin.Tools.Synchronous
                 double off = p.Value<double?>("offset") ?? 0;
                 if (off == 0) return ToolResult.Fail("offset required.").ToJson();
 
+                // Source: 实测 → AdmOffsetRegionBuilder.FaceToOffset.Add() + Distance (property)
                 dynamic b = ((dynamic)wp.Features).CreateAdmOffsetRegionBuilder(null);
                 int added = 0;
                 foreach (JToken ft in fts)
@@ -245,6 +261,7 @@ namespace NxMcpPlugin.Tools.Synchronous
                     catch { }
                 }
                 if (added == 0) return ToolResult.Fail("No valid faces found.").ToJson();
+                // Distance is Expression (probe verified)
                 ToolHelpers.SetExpressionValue(b, "Distance", off);
                 b.Commit(); b.Destroy();
                 var data = new JObject();
